@@ -163,6 +163,8 @@ function onError (err: Error) {
 process.on('uncaughtException', onError)
 process.on('unhandledRejection', onError)
 
+class OwnError extends Error { }
+
 const [, , ...tasks] = process.argv
 void (async () => {
 	let errors: number | undefined
@@ -176,9 +178,13 @@ void (async () => {
 		try {
 			if (tasks.length === 1 || remainingInMain) {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-require-imports
-				const taskFunction = require(path.join(process.cwd(), `./task/${task}.ts`))?.default
+				let taskFunction;
+				try {
+					taskFunction = require(path.join(process.cwd(), `./task/${task}.ts`))?.default
+				} catch { }
+
 				if (!taskFunction)
-					throw new Error(`No task function found by name "${task}"`)
+					throw new OwnError(`No task function found by name "${task}"`)
 
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 				await taskApi.run(taskFunction)
@@ -199,7 +205,7 @@ void (async () => {
 		}
 		catch (err) {
 			if (!loggedErrors.has(err as Error))
-				Log.error(err)
+				Log.error(err instanceof OwnError ? err.message : err)
 			errors = 1
 			break
 		}
