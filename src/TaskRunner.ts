@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import ansi from 'ansicolor'
 import { spawn } from "child_process"
 import chokidar from 'chokidar'
