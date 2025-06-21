@@ -2,9 +2,9 @@
 	"name": "task",
 	"private": true,
 	"version": "1.0.0",
-	"main": "out/index.js",
+	"main": "index.js",
 	"bin": {
-		"task": "out/TaskRunner.js"
+		"task": "TaskRunner.js"
 	},
 	"dependencies": {
 		"typescript": "5.8.3",
