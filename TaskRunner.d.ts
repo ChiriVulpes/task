@@ -14,7 +14,7 @@ export interface ITaskApi {
     run<T, ARGS extends any[]>(task: TaskFunctionDef<T, ARGS>, ...args: ARGS): Promise<T>;
     try<T, ARGS extends any[]>(task: TaskFunctionDef<T, ARGS>, ...args: ARGS): Promise<T>;
     debounce<T, ARGS extends any[]>(task: TaskFunctionDef<T, ARGS>, ...args: ARGS): void;
-    watch(globs: string[], task: TaskFunctionDef<unknown, [string]>, delay?: number): void;
+    watch(globs: string | string[], task: TaskFunctionDef<unknown, [string]>, delay?: number): void;
     exec(command: string, ...args: string[]): Promise<void>;
     exec(options: ITaskCLIOptions, command: string, ...args: string[]): Promise<void>;
 }
