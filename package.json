@@ -18,7 +18,7 @@
 		"@types/ws": "8.5.13"
 	},
 	"scripts": {
-		"build": "tsc --project src/tsconfig.json",
+		"build": "node ./build.js",
 		"watch": "tsc --project src/tsconfig.json --watch"
 	}
 }

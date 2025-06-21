@@ -15,9 +15,9 @@ export function RequestListener (listener: RequestListener): HTTPRequestListener
 	return listener as HTTPRequestListener
 }
 
-type MiddlewareDefinition<ARGS extends any[] = any[]> = (definition: Server.Definition, req: IncomingMessage, res: ServerResponse, ...args: ARGS) => PromiseOr<ServerResponse | undefined | void>
-type Middleware<ARGS extends any[] = any[]> = (req: IncomingMessage, res: ServerResponse, ...args: ARGS) => PromiseOr<ServerResponse | undefined | void>
-interface MiddlewareSupplier<ARGS extends any[] = any[]> {
+export type MiddlewareDefinition<ARGS extends any[] = any[]> = (definition: Server.Definition, req: IncomingMessage, res: ServerResponse, ...args: ARGS) => PromiseOr<ServerResponse | undefined | void>
+export type Middleware<ARGS extends any[] = any[]> = (req: IncomingMessage, res: ServerResponse, ...args: ARGS) => PromiseOr<ServerResponse | undefined | void>
+export interface MiddlewareSupplier<ARGS extends any[] = any[]> {
 	(definition: Server.Definition): Middleware<ARGS>
 	(definition: Server.Definition, req?: IncomingMessage, res?: ServerResponse, ...args: any[]): PromiseOr<ServerResponse | undefined | void>
 }

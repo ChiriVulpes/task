@@ -4,7 +4,8 @@
 		"esModuleInterop": true,
 		"target": "ES2022",
 		"moduleResolution": "node",
-		"outDir": "../out"
+		"outDir": "../out",
+		"declaration": true
 	},
 	"include": [
 		"**/*.ts",
