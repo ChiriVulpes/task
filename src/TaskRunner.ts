@@ -21,6 +21,13 @@ catch { }
 
 tsconfigpaths.register()
 
+export interface ITaskCLIOptions {
+	cwd?: string
+	env?: NodeJS.ProcessEnv
+	stdout?(data: string): any
+	stderr?(data: string): any
+}
+
 export interface ITaskApi {
 	noErrors?: true
 	lastError?: Error
@@ -30,6 +37,8 @@ export interface ITaskApi {
 	try<T, ARGS extends any[]> (task: TaskFunctionDef<T, ARGS>, ...args: ARGS): Promise<T>
 	debounce<T, ARGS extends any[]> (task: TaskFunctionDef<T, ARGS>, ...args: ARGS): void
 	watch (globs: string[], task: TaskFunctionDef<unknown, [string]>, delay?: number): void
+	exec (command: string, ...args: string[]): Promise<void>
+	exec (options: ITaskCLIOptions, command: string, ...args: string[]): Promise<void>
 }
 
 interface IDebouncedTask {
@@ -148,7 +157,52 @@ const taskApi: ITaskApi = {
 
 				this.debounce(task, path)
 			})
-	}
+	},
+	exec (options, command, ...args) {
+		return new Promise<void>((resolve, reject) => {
+			if (typeof options === 'string') {
+				args.unshift(command!)
+				command = options
+				options = {}
+			}
+
+			command = command!
+
+			if (command.startsWith('NPM:'))
+				command = `${command.slice(4)}${process.platform === 'win32' ? '.cmd' : ''}`
+
+			command = command.startsWith('PATH:')
+				? command.slice(5)
+				: path.resolve(`node_modules/.bin/${command}`)
+
+			const childProcess = spawn(wrapQuotes(command), args.map(wrapQuotes),
+				{ shell: true, stdio: [process.stdin, options.stdout ? 'pipe' : process.stdout, options.stderr ? 'pipe' : process.stderr], cwd: options.cwd, env: options.env })
+
+			if (options.stdout)
+				childProcess.stdout?.on('data', options.stdout)
+
+			if (options.stderr)
+				childProcess.stderr?.on('data', options.stderr)
+
+			childProcess.on('error', reject)
+			childProcess.on('exit', code => {
+				if (code) reject(new Error(`Error code ${code}`))
+				else resolve()
+			})
+		})
+	},
+}
+
+function wrapQuotes (value: string): string {
+	if (!value.includes(' '))
+		return value
+
+	if (!value.startsWith('"'))
+		value = `"${value}`
+	if (!value.endsWith('"'))
+		value = `${value}"`
+
+	return value
 }
 
 ////////////////////////////////////
