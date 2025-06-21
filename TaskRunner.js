@@ -151,8 +151,44 @@ const taskApi = {
                 return;
             this.debounce(task, path);
         });
-    }
+    },
+    exec(options, command, ...args) {
+        return new Promise((resolve, reject) => {
+            if (typeof options === 'string') {
+                args.unshift(command);
+                command = options;
+                options = {};
+            }
+            command = command;
+            if (command.startsWith('NPM:'))
+                command = `${command.slice(4)}${process.platform === 'win32' ? '.cmd' : ''}`;
+            command = command.startsWith('PATH:')
+                ? command.slice(5)
+                : path_1.default.resolve(`node_modules/.bin/${command}`);
+            const childProcess = (0, child_process_1.spawn)(wrapQuotes(command), args.map(wrapQuotes), { shell: true, stdio: [process.stdin, options.stdout ? 'pipe' : process.stdout, options.stderr ? 'pipe' : process.stderr], cwd: options.cwd, env: options.env });
+            if (options.stdout)
+                childProcess.stdout?.on('data', options.stdout);
+            if (options.stderr)
+                childProcess.stderr?.on('data', options.stderr);
+            childProcess.on('error', reject);
+            childProcess.on('exit', code => {
+                if (code)
+                    reject(new Error(`Error code ${code}`));
+                else
+                    resolve();
+            });
+        });
+    },
 };
+function wrapQuotes(value) {
+    if (!value.includes(' '))
+        return value;
+    if (!value.startsWith('"'))
+        value = `"${value}`;
+    if (!value.endsWith('"'))
+        value = `${value}"`;
+    return value;
+}
 ////////////////////////////////////
 // Code
 //
