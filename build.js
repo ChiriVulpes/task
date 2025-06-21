@@ -11,7 +11,7 @@ const exec = util.promisify(childProcess.exec);
 	const packageJson = /** @type {Partial<typeof import('./package.json')>} */(JSON.parse(await fs.promises.readFile("package.json", "utf8")));
 	delete packageJson.private;
 	delete packageJson.scripts;
-	// delete packageJson.devDependencies;
+	delete packageJson.devDependencies;
 	// delete packageJson.overrides;
 
 	await fs.promises.writeFile("out/package.json", JSON.stringify(packageJson, null, 2) + "\n");
