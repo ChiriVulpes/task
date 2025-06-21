@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import type { TaskFunction, TaskFunctionDef } from './Task';
 export interface ITaskApi {
     noErrors?: true;
