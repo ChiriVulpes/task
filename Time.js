@@ -1,22 +1,30 @@
-import ansi from 'ansicolor';
-import { performance } from 'perf_hooks';
-export function stopwatch() {
-    const start = performance.now();
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.stopwatch = stopwatch;
+exports.elapsed = elapsed;
+exports.timestamp = timestamp;
+const ansicolor_1 = __importDefault(require("ansicolor"));
+const perf_hooks_1 = require("perf_hooks");
+function stopwatch() {
+    const start = perf_hooks_1.performance.now();
     let elapsedTime;
     function stop() {
         if (elapsedTime === undefined)
-            elapsedTime = performance.now() - start;
+            elapsedTime = perf_hooks_1.performance.now() - start;
     }
     return {
         get elapsed() {
-            return elapsedTime ?? performance.now() - start;
+            return elapsedTime ?? perf_hooks_1.performance.now() - start;
         },
         stop,
         time: () => (stop(), elapsed(elapsedTime)),
     };
 }
-export function elapsed(elapsed) {
-    return ansi.magenta(elapsedRaw(elapsed));
+function elapsed(elapsed) {
+    return ansicolor_1.default.magenta(elapsedRaw(elapsed));
 }
 function elapsedRaw(elapsed) {
     if (elapsed < 1)
@@ -28,10 +36,10 @@ function elapsedRaw(elapsed) {
     return `${+(elapsed / 60_000).toFixed(2)} m`;
 }
 const format = new Intl.DateTimeFormat('en-GB', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false, timeZone: 'Australia/Melbourne' });
-export function timestamp(color = 'darkGray') {
-    return ansi[color](format.format(new Date()));
+function timestamp(color = 'darkGray') {
+    return ansicolor_1.default[color](format.format(new Date()));
 }
-export default class Time {
+class Time {
     static get lastDailyReset() {
         return this.nextDailyReset - this.days(1);
     }
@@ -69,3 +77,4 @@ export default class Time {
             .slice(0, -5) + 'Z';
     }
 }
+exports.default = Time;

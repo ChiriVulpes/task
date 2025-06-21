@@ -1,15 +1,20 @@
+"use strict";
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="./util/https-localhost.d.ts" />
-import ansi from 'ansicolor';
-import https from 'https';
-import { getCerts } from 'https-localhost/certs';
-import os from 'os';
-import WebSocket from 'ws';
-import Log from '../Log';
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const ansicolor_1 = __importDefault(require("ansicolor"));
+const https_1 = __importDefault(require("https"));
+const certs_1 = require("https-localhost/certs");
+const os_1 = __importDefault(require("os"));
+const ws_1 = __importDefault(require("ws"));
+const Log_1 = __importDefault(require("../Log"));
 const websocketConnections = new Set();
 async function Server(definition) {
-    const server = https.createServer({
-        ...await getCerts(process.env.HOST || 'localhost'),
+    const server = https_1.default.createServer({
+        ...await (0, certs_1.getCerts)(process.env.HOST || 'localhost'),
     }, definition.router);
     const port = +definition.port || 8095;
     const result = {
@@ -17,7 +22,7 @@ async function Server(definition) {
             return new Promise(resolve => server.listen(port, resolve));
         },
         socket(definition) {
-            const wss = new WebSocket.Server({ server });
+            const wss = new ws_1.default.Server({ server });
             wss.on('connection', ws => {
                 websocketConnections.add(ws);
                 definition?.onConnect?.(ws);
@@ -41,14 +46,14 @@ async function Server(definition) {
             });
         },
         announce() {
-            Log.info('Listening on port', ansi.lightGreen(port));
-            const networkInterfaces = os.networkInterfaces();
-            Log.info('Serving', ansi.cyan(definition.root), 'on:', ...(definition.hostname ? [definition.hostname]
+            Log_1.default.info('Listening on port', ansicolor_1.default.lightGreen(port));
+            const networkInterfaces = os_1.default.networkInterfaces();
+            Log_1.default.info('Serving', ansicolor_1.default.cyan(definition.root), 'on:', ...(definition.hostname ? [definition.hostname]
                 : Object.values(networkInterfaces)
                     .flatMap(interfaces => interfaces)
                     .filter((details) => details?.family === 'IPv4')
                     .map(details => details.address))
-                .map(hostname => ansi.darkGray(`https://${hostname}:${port}`)));
+                .map(hostname => ansicolor_1.default.darkGray(`https://${hostname}:${port}`)));
         },
     };
     return result;
@@ -64,4 +69,4 @@ async function Server(definition) {
     }
     Server.sendMessage = sendMessage;
 })(Server || (Server = {}));
-export default Server;
+exports.default = Server;

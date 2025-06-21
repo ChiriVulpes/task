@@ -1,5 +1,10 @@
-import { spawn } from 'child_process';
-import path from 'path';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const child_process_1 = require("child_process");
+const path_1 = __importDefault(require("path"));
 const SYMBOL_IS_TASK_FUNCTION = Symbol('IS_TASK_FUNCTION');
 function Task(name, task) {
     Object.defineProperty(task, 'name', { value: name });
@@ -23,8 +28,8 @@ function Task(name, task) {
                 command = `${command.slice(4)}${process.platform === 'win32' ? '.cmd' : ''}`;
             command = command.startsWith('PATH:')
                 ? command.slice(5)
-                : path.resolve(`node_modules/.bin/${command}`);
-            const childProcess = spawn(wrapQuotes(command), args.map(wrapQuotes), { shell: true, stdio: [process.stdin, options.stdout ? 'pipe' : process.stdout, options.stderr ? 'pipe' : process.stderr], cwd: options.cwd, env: options.env });
+                : path_1.default.resolve(`node_modules/.bin/${command}`);
+            const childProcess = (0, child_process_1.spawn)(wrapQuotes(command), args.map(wrapQuotes), { shell: true, stdio: [process.stdin, options.stdout ? 'pipe' : process.stdout, options.stderr ? 'pipe' : process.stderr], cwd: options.cwd, env: options.env });
             if (options.stdout)
                 childProcess.stdout?.on('data', options.stdout);
             if (options.stderr)
@@ -40,7 +45,7 @@ function Task(name, task) {
     }
     Task.cli = cli;
 })(Task || (Task = {}));
-export default Task;
+exports.default = Task;
 function wrapQuotes(value) {
     if (!value.includes(' '))
         return value;

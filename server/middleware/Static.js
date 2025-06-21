@@ -1,5 +1,10 @@
-import Middleware from '../util/Middleware';
-import SendFile from '../util/SendFile';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const Middleware_1 = __importDefault(require("../util/Middleware"));
+const SendFile_1 = __importDefault(require("../util/SendFile"));
 ////////////////////////////////////
 //#region Load Rewrites
 var RewriteCheckType;
@@ -39,7 +44,7 @@ function getRewriteChecks(definition) {
 }
 //#endregion
 ////////////////////////////////////
-export default Middleware((definition, req, res) => {
+exports.default = (0, Middleware_1.default)((definition, req, res) => {
     if (req.url === '/' || req.url.startsWith('/?'))
         req.url = '/index.html';
     const rewrites = getRewriteChecks(definition);
@@ -58,5 +63,5 @@ export default Middleware((definition, req, res) => {
     if (shouldRewrite)
         req.url = '/index.html';
     req.url = `.${req.url}`;
-    return SendFile(definition, req, res, req.url);
+    return (0, SendFile_1.default)(definition, req, res, req.url);
 });

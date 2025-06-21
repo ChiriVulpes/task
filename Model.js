@@ -1,4 +1,7 @@
-export default function Model(generator) {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = Model;
+function Model(generator) {
     const result = {};
     return {
         get: (...args) => {

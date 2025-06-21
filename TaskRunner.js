@@ -1,16 +1,54 @@
-import ansi from 'ansicolor';
-import { spawn } from "child_process";
-import chokidar from 'chokidar';
-import dotenv from 'dotenv';
-import path from 'path';
-import * as tsconfigpaths from 'tsconfig-paths';
-import Hash from './Hash';
-import Log from './Log';
-import Task from './Task';
-import { stopwatch } from './Time';
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const ansicolor_1 = __importDefault(require("ansicolor"));
+const child_process_1 = require("child_process");
+const chokidar_1 = __importDefault(require("chokidar"));
+const dotenv_1 = __importDefault(require("dotenv"));
+const path_1 = __importDefault(require("path"));
+const tsconfigpaths = __importStar(require("tsconfig-paths"));
+const Hash_1 = __importDefault(require("./Hash"));
+const Log_1 = __importDefault(require("./Log"));
+const Task_1 = __importDefault(require("./Task"));
+const Time_1 = require("./Time");
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 try {
-    dotenv.config();
+    dotenv_1.default.config();
 }
 catch { }
 tsconfigpaths.register();
@@ -19,7 +57,7 @@ const loggedErrors = new Set();
 const taskApi = {
     lastError: undefined,
     series(...tasks) {
-        return Task(null, async (api) => {
+        return (0, Task_1.default)(null, async (api) => {
             const shouldError = !api.noErrors;
             delete api.noErrors;
             for (const task of tasks)
@@ -27,7 +65,7 @@ const taskApi = {
         });
     },
     parallel(...tasks) {
-        return Task(null, async (api) => {
+        return (0, Task_1.default)(null, async (api) => {
             const shouldError = !api.noErrors;
             delete api.noErrors;
             await Promise.all(tasks.map(task => Promise.resolve(api[shouldError ? 'run' : 'try'](task))));
@@ -42,10 +80,10 @@ const taskApi = {
         const shouldError = !this.noErrors;
         delete this.noErrors;
         let result;
-        const taskName = ansi.cyan(task.name || '<anonymous>');
+        const taskName = ansicolor_1.default.cyan(task.name || '<anonymous>');
         if (task.name)
-            Log.info(`Starting ${taskName}...`);
-        const watch = stopwatch();
+            Log_1.default.info(`Starting ${taskName}...`);
+        const watch = (0, Time_1.stopwatch)();
         let err;
         try {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -61,11 +99,11 @@ const taskApi = {
             if (err) {
                 if (!loggedErrors.has(err)) {
                     loggedErrors.add(err);
-                    Log.error(`Task ${taskName} errored after ${time}:`, err);
+                    Log_1.default.error(`Task ${taskName} errored after ${time}:`, err);
                 }
             }
             else if (task.name)
-                Log.info(`Finished ${taskName} in ${time}`);
+                Log_1.default.info(`Finished ${taskName} in ${time}`);
         }
         while (true) {
             if (err) {
@@ -73,7 +111,7 @@ const taskApi = {
                 if (shouldError)
                     throw err;
             }
-            if (!Task.is(result))
+            if (!Task_1.default.is(result))
                 break;
             result = await (!shouldError ? this.try(result) : this.run(result));
         }
@@ -104,11 +142,11 @@ const taskApi = {
         }
     },
     watch(globs, task, delay = 0) {
-        chokidar.watch(globs, { ignoreInitial: true })
+        chokidar_1.default.watch(globs, { ignoreInitial: true })
             // eslint-disable-next-line @typescript-eslint/no-misused-promises
             .on('all', async (event, path) => {
             await sleep(delay);
-            if (!await Hash.fileChanged(path))
+            if (!await Hash_1.default.fileChanged(path))
                 return;
             this.debounce(task, path);
         });
@@ -118,7 +156,7 @@ const taskApi = {
 // Code
 //
 function onError(err) {
-    Log.error(err.stack ?? err);
+    Log_1.default.error(err.stack ?? err);
 }
 process.on('uncaughtException', onError);
 process.on('unhandledRejection', onError);
@@ -134,7 +172,7 @@ void (async () => {
         try {
             if (tasks.length === 1 || remainingInMain) {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-require-imports
-                const taskFunction = require(path.join(process.cwd(), `./task/${task}.ts`))?.default;
+                const taskFunction = require(path_1.default.join(process.cwd(), `./task/${task}.ts`))?.default;
                 if (!taskFunction)
                     throw new Error(`No task function found by name "${task}"`);
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -142,7 +180,7 @@ void (async () => {
                 continue;
             }
             await new Promise((resolve, reject) => {
-                const p = spawn('npx', ['ts-node', `"${__filename}"`, task], { shell: true, stdio: 'inherit' });
+                const p = (0, child_process_1.spawn)('npx', ['ts-node', `"${__filename}"`, task], { shell: true, stdio: 'inherit' });
                 p.on('error', reject);
                 p.on('close', code => {
                     if (code)
@@ -155,7 +193,7 @@ void (async () => {
         }
         catch (err) {
             if (!loggedErrors.has(err))
-                Log.error(err);
+                Log_1.default.error(err);
             errors = 1;
             break;
         }

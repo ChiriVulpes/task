@@ -1,10 +1,15 @@
-import fs from "fs";
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const fs_1 = __importDefault(require("fs"));
 var JSON5;
 (function (JSON5) {
     async function readFile(path) {
         let text;
         try {
-            text = await fs.promises.readFile(path, 'utf8');
+            text = await fs_1.default.promises.readFile(path, 'utf8');
         }
         catch (err) {
             throw new Error(`Failed to read ${path}`, { cause: err });
@@ -32,4 +37,4 @@ var JSON5;
     }
     JSON5.parse = parse;
 })(JSON5 || (JSON5 = {}));
-export default JSON5;
+exports.default = JSON5;

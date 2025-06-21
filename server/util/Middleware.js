@@ -1,4 +1,7 @@
-export function RequestListener(listener) {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.RequestListener = RequestListener;
+function RequestListener(listener) {
     return listener;
 }
 /**
@@ -12,4 +15,4 @@ function Middleware(middleware) {
         return middleware(definition, req, res, ...args);
     });
 }
-export default Middleware;
+exports.default = Middleware;

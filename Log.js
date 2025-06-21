@@ -1,5 +1,11 @@
-import ansi from 'ansicolor';
-import { timestamp } from './Time';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ILogSource = void 0;
+const ansicolor_1 = __importDefault(require("ansicolor"));
+const Time_1 = require("./Time");
 var ILog;
 (function (ILog) {
     function is(value) {
@@ -12,7 +18,7 @@ var ILog;
     }
     ILog.is = is;
 })(ILog || (ILog = {}));
-export var ILogSource;
+var ILogSource;
 (function (ILogSource) {
     function is(value) {
         return typeof value === 'object'
@@ -20,31 +26,31 @@ export var ILogSource;
             && ILog.is(value.log);
     }
     ILogSource.is = is;
-})(ILogSource || (ILogSource = {}));
+})(ILogSource || (exports.ILogSource = ILogSource = {}));
 // eslint-disable-next-line prefer-const
 let Log;
 class LogImplementation {
     source;
     info(...what) {
         if (this.source !== undefined)
-            console.log(timestamp(), this.source, ...what);
+            console.log((0, Time_1.timestamp)(), this.source, ...what);
         else
-            console.log(timestamp(), ...what);
+            console.log((0, Time_1.timestamp)(), ...what);
     }
     warn(...what) {
         if (this.source !== undefined)
-            console.log(timestamp('yellow'), this.source, ...what);
+            console.log((0, Time_1.timestamp)('yellow'), this.source, ...what);
         else
-            console.warn(timestamp('yellow'), ...what);
+            console.warn((0, Time_1.timestamp)('yellow'), ...what);
     }
     error(...what) {
         if (this.source !== undefined)
-            console.log(timestamp('red'), this.source, ...what);
+            console.log((0, Time_1.timestamp)('red'), this.source, ...what);
         else
-            console.error(timestamp('red'), ...what);
+            console.error((0, Time_1.timestamp)('red'), ...what);
     }
     setSources(...sources) {
-        this.source = ansi.darkGray('- ') + sources.join(ansi.darkGray(' / ')) + ansi.darkGray(' -');
+        this.source = ansicolor_1.default.darkGray('- ') + sources.join(ansicolor_1.default.darkGray(' / ')) + ansicolor_1.default.darkGray(' -');
         return this;
     }
     get(source, ...sources) {
@@ -63,4 +69,4 @@ class LogImplementation {
     }
 }
 Log = new LogImplementation();
-export default Log;
+exports.default = Log;
