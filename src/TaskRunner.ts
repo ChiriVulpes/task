@@ -19,6 +19,10 @@ try {
 }
 catch { }
 
+try {
+	const tsnode: typeof import("ts-node") = require("ts-node")
+	tsnode.register()
+} catch { }
 tsconfigpaths.register()
 
 export interface ITaskCLIOptions {

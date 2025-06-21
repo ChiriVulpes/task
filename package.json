@@ -17,7 +17,8 @@
 		"@types/ws": "8.5.13"
 	},
 	"devDependencies": {
-		"typescript": "5.8.3"
+		"typescript": "5.8.3",
+		"ts-node": "10.9.2"
 	},
 	"scripts": {
 		"build": "node ./build.js",

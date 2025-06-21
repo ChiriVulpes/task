@@ -6,6 +6,7 @@ import Static from "./server/middleware/Static"
 import Server from "./server/Server"
 import MiddlewareBase from "./server/util/Middleware"
 import Task from "./Task"
+import { ITaskApi } from "./TaskRunner"
 import Time from "./Time"
 
 const Middleware = Object.assign(MiddlewareBase, {
@@ -13,5 +14,5 @@ const Middleware = Object.assign(MiddlewareBase, {
 	E404,
 })
 
-export { Hash, Log, Middleware, Model, Server, Task, Time }
+export { Hash, ITaskApi, Log, Middleware, Model, Server, Task, Time }
 
