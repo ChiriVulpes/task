@@ -52,6 +52,11 @@ try {
     dotenv_1.default.config();
 }
 catch { }
+try {
+    const tsnode = require("ts-node");
+    tsnode.register();
+}
+catch { }
 tsconfigpaths.register();
 const debouncedTasks = new Map();
 const loggedErrors = new Set();
