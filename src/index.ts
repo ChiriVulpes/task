@@ -8,11 +8,12 @@ import MiddlewareBase from "./server/util/Middleware"
 import Task from "./Task"
 import { ITaskApi } from "./TaskRunner"
 import Time from "./Time"
+import TypeScript from "./TypeScript"
 
 const Middleware = Object.assign(MiddlewareBase, {
 	Static,
 	E404,
 })
 
-export { Hash, ITaskApi, Log, Middleware, Model, Server, Task, Time }
+export { Hash, ITaskApi, Log, Middleware, Model, Server, Task, Time, TypeScript }
 
