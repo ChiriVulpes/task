@@ -1,5 +1,5 @@
 (() => {
-	const baseURL = document.currentScript?.dataset.baseUrl
+	const baseURL = self.document?.currentScript?.dataset.baseUrl
 
 	/**
 	 * @enum {number}
@@ -57,7 +57,7 @@
 			fn = /** @type {ModuleInitializer} */ (reqs)
 			reqs = name
 
-			const src = document.currentScript?.getAttribute("src") || document.currentScript?.getAttribute("data-src")
+			const src = self.document?.currentScript?.getAttribute("src") || self.document?.currentScript?.getAttribute("data-src")
 			if (!src)
 				throw new Error("Cannot define module without a name")
 
@@ -94,7 +94,7 @@
 			_state: ModuleState.Unprocessed,
 			_requirements,
 			_initializer: initialiser,
-			_init: document.currentScript?.dataset.init === name,
+			_init: self.document?.currentScript?.dataset.init === name,
 			_replace (newModule) {
 				if (typeof newModule !== "object" && typeof newModule !== "function")
 					throw new Error("Cannot assign module.exports to a non-object")
@@ -270,11 +270,11 @@
 	// Actually process the modules
 	//
 
-	document.addEventListener("DOMContentLoaded", processModules)
+	self.document?.addEventListener("DOMContentLoaded", processModules)
 
 	let initialProcessCompleted = false
 	async function processModules () {
-		const scriptsStillToImport = Array.from(document.querySelectorAll("template[data-script]"))
+		const scriptsStillToImport = Array.from(self.document?.querySelectorAll("template[data-script]") ?? [])
 			.map(definition => {
 				const script = /** @type {HTMLTemplateElement} */ (definition).dataset.script
 				definition.remove()
@@ -317,12 +317,17 @@
 	 * @param {string} req
 	 */
 	async function importAdditionalModule (req) {
-		const script = document.createElement("script")
-		document.head.appendChild(script)
-		/** @type {Promise<void>} */
-		const promise = new Promise(resolve => script.addEventListener("load", () => resolve()))
-		script.src = `/script/${req}.js`
-		return promise
+		if (self.document) {
+			const script = document.createElement("script")
+			document.head.appendChild(script)
+			/** @type {Promise<void>} */
+			const promise = new Promise(resolve => script.addEventListener("load", () => resolve()))
+			script.src = `/script/${req}.js`
+			return promise
+		}
+		else {
+			self.importScripts(`/script/${req}.js`)
+		}
 	}
 
 	/**
