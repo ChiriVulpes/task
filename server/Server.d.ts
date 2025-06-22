@@ -21,7 +21,8 @@ declare namespace Server {
         root: string;
         hostname?: string;
         port?: number;
-        urlRewrite?: string;
+        spaIndexRewrite?: string;
+        serverIndex?: string;
     }
     function sendMessage<TYPE extends keyof MessageTypeRegistry>(type: TYPE, data: NoInfer<MessageTypeRegistry[TYPE]>): void;
 }
