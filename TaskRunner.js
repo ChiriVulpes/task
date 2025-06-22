@@ -148,7 +148,7 @@ const taskApi = {
         }
     },
     watch(globs, task, delay = 0) {
-        chokidar_1.default.watch(globs, { ignoreInitial: true })
+        chokidar_1.default.watch(globs, { ignoreInitial: true, awaitWriteFinish: true })
             // eslint-disable-next-line @typescript-eslint/no-misused-promises
             .on('all', async (event, path) => {
             await sleep(delay);
