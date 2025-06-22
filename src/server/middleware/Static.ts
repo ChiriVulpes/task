@@ -24,7 +24,7 @@ function getRewriteChecks (definition: Server.Definition) {
 	const equalsToken = 'http.request.uri.path eq "'
 	const notEqualsToken = 'http.request.uri.path ne "'
 	const startsWithToken = 'starts_with(http.request.uri.path, "'
-	return rewrites = (definition.urlRewrite?.slice(1, -1) ?? '').split(' and ')
+	return rewrites = (definition.spaIndexRewrite?.slice(1, -1) ?? '').split(' and ')
 		.map(expr => {
 			const check: Partial<RewriteCheck> = {}
 			if (expr.startsWith('not ')) {
@@ -57,7 +57,7 @@ function getRewriteChecks (definition: Server.Definition) {
 
 export default Middleware((definition, req, res) => {
 	if (req.url === '/' || req.url.startsWith('/?'))
-		req.url = '/index.html'
+		req.url = definition.serverIndex ?? '/index.html'
 
 	const rewrites = getRewriteChecks(definition)
 	const shouldRewrite = rewrites.every(rewrite => {
@@ -74,7 +74,7 @@ export default Middleware((definition, req, res) => {
 	})
 
 	if (shouldRewrite)
-		req.url = '/index.html'
+		req.url = definition.serverIndex ?? '/index.html'
 
 	req.url = `.${req.url}`
 
