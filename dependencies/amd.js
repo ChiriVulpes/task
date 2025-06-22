@@ -234,23 +234,23 @@
 		const name = module._name
 		const inject = module.default ?? module
 		const moduleDefaultName = basename(name)
-		if (isInjectableModuleDefaultNameRegex.test(moduleDefaultName) && !(moduleDefaultName in window))
-			Object.assign(window, { [moduleDefaultName]: inject })
+		if (isInjectableModuleDefaultNameRegex.test(moduleDefaultName) && !(moduleDefaultName in self))
+			Object.assign(self, { [moduleDefaultName]: inject })
 
 		for (const key of Object.keys(module)) {
-			if (key !== "default" && !key.startsWith("_") && isInjectableModuleDefaultNameRegex.test(key) && !(key in window)) {
-				Object.assign(window, { [key]: module[key] })
+			if (key !== "default" && !key.startsWith("_") && isInjectableModuleDefaultNameRegex.test(key) && !(key in self)) {
+				Object.assign(self, { [key]: module[key] })
 			}
 		}
 	}
 
 
 	////////////////////////////////////
-	// Add the above functions to Window
+	// Add the above functions to "self"
 	//
 
 	/**
-	 * @typedef {Object} WindowExtensions
+	 * @typedef {Object} SelfExtensions
 	 * @property {typeof define} define
 	 * @property {typeof getModule} getModule
 	 * @property {typeof initializeModuleByName} initializeModule
@@ -258,12 +258,12 @@
 	 * @property {typeof allowRedefine} allowRedefine
 	 */
 
-	const moddableWindow = /** @type {Window & typeof globalThis & WindowExtensions} */(window)
-	moddableWindow.define = define
-	moddableWindow.getModule = getModule
-	moddableWindow.initializeModule = initializeModuleByName
-	moddableWindow.allowRedefine = allowRedefine
-	moddableWindow.hasModule = name => moduleMap.has(name)
+	const extensibleSelf = /** @type {Window & typeof globalThis & SelfExtensions} */(self)
+	extensibleSelf.define = define
+	extensibleSelf.getModule = getModule
+	extensibleSelf.initializeModule = initializeModuleByName
+	extensibleSelf.allowRedefine = allowRedefine
+	extensibleSelf.hasModule = name => moduleMap.has(name)
 
 
 	////////////////////////////////////
