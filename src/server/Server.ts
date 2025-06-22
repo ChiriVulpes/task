@@ -2,12 +2,12 @@
 /// <reference path="./util/https-localhost.d.ts" />
 
 import ansi from 'ansicolor'
-import { RequestListener } from 'http'
 import https from 'https'
 import { getCerts } from 'https-localhost/certs'
 import os from 'os'
 import WebSocket from 'ws'
 import Log from '../Log'
+import { MiddlewareSupplier, RequestListener } from './util/Middleware'
 
 export interface MessageTypeRegistry {
 
@@ -34,7 +34,13 @@ async function Server (definition: Server.Definition) {
 		{
 			...await getCerts(process.env.HOST || 'localhost'),
 		},
-		definition.router,
+		RequestListener(async (req, res) => {
+			const result = await definition.router(definition, req, res)
+			if (!result) {
+				res.writeHead(500, { 'Content-Type': 'text/plain' })
+				res.end('Internal Server Error')
+			}
+		}),
 	)
 
 	const port = +definition.port! || 8095
@@ -88,7 +94,7 @@ async function Server (definition: Server.Definition) {
 
 namespace Server {
 	export interface Definition {
-		router: RequestListener
+		router: MiddlewareSupplier<[]>
 		root: string
 		hostname?: string
 		port?: number
