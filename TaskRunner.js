@@ -220,7 +220,10 @@ void (async () => {
                 try {
                     taskFunction = require(path_1.default.join(process.cwd(), `./task/${task}.ts`))?.default;
                 }
-                catch { }
+                catch (err) {
+                    if (err && err.code !== 'MODULE_NOT_FOUND')
+                        throw err;
+                }
                 if (!taskFunction)
                     throw new OwnError(`No task function found by name "${task}"`);
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
