@@ -3,7 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TypeScript = exports.Time = exports.Task = exports.Server = exports.Model = exports.Middleware = exports.Log = exports.Hash = void 0;
+exports.TypeScript = exports.Time = exports.Task = exports.Server = exports.Model = exports.Middleware = exports.Log = exports.Hash = exports.Dependencies = void 0;
+const Dependencies_1 = __importDefault(require("./Dependencies"));
+exports.Dependencies = Dependencies_1.default;
 const Hash_1 = __importDefault(require("./Hash"));
 exports.Hash = Hash_1.default;
 const Log_1 = __importDefault(require("./Log"));

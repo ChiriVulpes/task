@@ -1,3 +1,4 @@
+import Dependencies from "./Dependencies";
 import Hash from "./Hash";
 import Log from "./Log";
 import Model from "./Model";
@@ -11,4 +12,4 @@ declare const Middleware: typeof MiddlewareBase & {
     Static: import("./server/util/Middleware").MiddlewareSupplier<[]>;
     E404: import("./server/util/Middleware").MiddlewareSupplier<[message?: string | undefined]>;
 };
-export { Hash, ITaskApi, Log, Middleware, Model, Server, Task, Time, TypeScript };
+export { Dependencies, Hash, ITaskApi, Log, Middleware, Model, Server, Task, Time, TypeScript };
