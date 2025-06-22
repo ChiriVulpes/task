@@ -239,7 +239,10 @@ void (async () => {
 				let taskFunction;
 				try {
 					taskFunction = require(path.join(process.cwd(), `./task/${task}.ts`))?.default
-				} catch { }
+				} catch (err) {
+					if (err && (err as any).code !== 'MODULE_NOT_FOUND')
+						throw err
+				}
 
 				if (!taskFunction)
 					throw new OwnError(`No task function found by name "${task}"`)
