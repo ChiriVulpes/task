@@ -20,6 +20,8 @@ const exec = util.promisify(childProcess.exec);
 	await fs.promises.copyFile("README.md", "out/README.md");
 	await fs.promises.copyFile("LICENSE", "out/LICENSE");
 
+	await fs.promises.cp("dependencies", "out/dependencies", { recursive: true })
+
 	let { stdout, stderr } = await exec('tsc --project src/tsconfig.json');
 	console.log(stdout);
 	console.error(stderr);

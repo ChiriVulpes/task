@@ -1,3 +1,4 @@
+import Dependencies from "./Dependencies"
 import Hash from "./Hash"
 import Log from "./Log"
 import Model from "./Model"
@@ -15,5 +16,5 @@ const Middleware = Object.assign(MiddlewareBase, {
 	E404,
 })
 
-export { Hash, ITaskApi, Log, Middleware, Model, Server, Task, Time, TypeScript }
+export { Dependencies, Hash, ITaskApi, Log, Middleware, Model, Server, Task, Time, TypeScript }
 
