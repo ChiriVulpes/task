@@ -11,11 +11,18 @@ const certs_1 = require("https-localhost/certs");
 const os_1 = __importDefault(require("os"));
 const ws_1 = __importDefault(require("ws"));
 const Log_1 = __importDefault(require("../Log"));
+const Middleware_1 = require("./util/Middleware");
 const websocketConnections = new Set();
 async function Server(definition) {
     const server = https_1.default.createServer({
         ...await (0, certs_1.getCerts)(process.env.HOST || 'localhost'),
-    }, definition.router);
+    }, (0, Middleware_1.RequestListener)(async (req, res) => {
+        const result = await definition.router(definition, req, res);
+        if (!result) {
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('Internal Server Error');
+        }
+    }));
     const port = +definition.port || 8095;
     const result = {
         async listen() {

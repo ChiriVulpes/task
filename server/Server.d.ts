@@ -1,5 +1,5 @@
-import { RequestListener } from 'http';
 import WebSocket from 'ws';
+import { MiddlewareSupplier } from './util/Middleware';
 export interface MessageTypeRegistry {
 }
 interface SocketDefinition {
@@ -17,7 +17,7 @@ interface Server {
 declare function Server(definition: Server.Definition): Promise<Server>;
 declare namespace Server {
     interface Definition {
-        router: RequestListener;
+        router: MiddlewareSupplier<[]>;
         root: string;
         hostname?: string;
         port?: number;
