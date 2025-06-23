@@ -25,11 +25,11 @@ interface Server {
 	listen (): Promise<void>
 	socket (definition?: SocketDefinition): void
 	announce (): void
+	sendMessage<TYPE extends keyof MessageTypeRegistry> (type: TYPE, data: NoInfer<MessageTypeRegistry[TYPE]>): void
 }
 
-const websocketConnections = new Set<WebSocket>()
-
 async function Server (definition: Server.Definition) {
+	const websocketConnections = new Set<WebSocket>()
 	const server = https.createServer(
 		{
 			...await getCerts(process.env.HOST || 'localhost'),
@@ -87,6 +87,14 @@ async function Server (definition: Server.Definition) {
 					.map(details => details.address))
 				.map(hostname => ansi.darkGray(`https://${hostname}:${port}`)))
 		},
+		sendMessage (type, data) {
+			for (const socket of websocketConnections) {
+				socket.send(JSON.stringify({
+					type,
+					data,
+				}))
+			}
+		},
 	}
 
 	return result
@@ -100,15 +108,6 @@ namespace Server {
 		port?: number
 		spaIndexRewrite?: string
 		serverIndex?: string
-	}
-
-	export function sendMessage<TYPE extends keyof MessageTypeRegistry> (type: TYPE, data: NoInfer<MessageTypeRegistry[TYPE]>) {
-		for (const socket of websocketConnections) {
-			socket.send(JSON.stringify({
-				type,
-				data,
-			}))
-		}
 	}
 }
 
