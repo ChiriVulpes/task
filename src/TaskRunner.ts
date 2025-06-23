@@ -152,7 +152,7 @@ const taskApi: ITaskApi = {
 		}
 	},
 	watch (globs, task, delay = 0) {
-		chokidar.watch(globs, { ignoreInitial: true, awaitWriteFinish: true })
+		chokidar.watch(globs, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 100 } })
 			// eslint-disable-next-line @typescript-eslint/no-misused-promises
 			.on('all', async (event, path) => {
 				await sleep(delay)
