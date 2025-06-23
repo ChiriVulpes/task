@@ -13,6 +13,7 @@ interface Server {
     listen(): Promise<void>;
     socket(definition?: SocketDefinition): void;
     announce(): void;
+    sendMessage<TYPE extends keyof MessageTypeRegistry>(type: TYPE, data: NoInfer<MessageTypeRegistry[TYPE]>): void;
 }
 declare function Server(definition: Server.Definition): Promise<Server>;
 declare namespace Server {
@@ -24,6 +25,5 @@ declare namespace Server {
         spaIndexRewrite?: string;
         serverIndex?: string;
     }
-    function sendMessage<TYPE extends keyof MessageTypeRegistry>(type: TYPE, data: NoInfer<MessageTypeRegistry[TYPE]>): void;
 }
 export default Server;

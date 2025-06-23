@@ -12,8 +12,8 @@ const os_1 = __importDefault(require("os"));
 const ws_1 = __importDefault(require("ws"));
 const Log_1 = __importDefault(require("../Log"));
 const Middleware_1 = require("./util/Middleware");
-const websocketConnections = new Set();
 async function Server(definition) {
+    const websocketConnections = new Set();
     const server = https_1.default.createServer({
         ...await (0, certs_1.getCerts)(process.env.HOST || 'localhost'),
     }, (0, Middleware_1.RequestListener)(async (req, res) => {
@@ -62,18 +62,15 @@ async function Server(definition) {
                     .map(details => details.address))
                 .map(hostname => ansicolor_1.default.darkGray(`https://${hostname}:${port}`)));
         },
+        sendMessage(type, data) {
+            for (const socket of websocketConnections) {
+                socket.send(JSON.stringify({
+                    type,
+                    data,
+                }));
+            }
+        },
     };
     return result;
 }
-(function (Server) {
-    function sendMessage(type, data) {
-        for (const socket of websocketConnections) {
-            socket.send(JSON.stringify({
-                type,
-                data,
-            }));
-        }
-    }
-    Server.sendMessage = sendMessage;
-})(Server || (Server = {}));
 exports.default = Server;
