@@ -47,12 +47,20 @@
 	 */
 	const requirements = new Set()
 
+	/** @type {string | undefined} */
+	let nextName
 	/**
 	 * @param {string | string[]} name
 	 * @param {string[] | ModuleInitializer} reqs
 	 * @param {ModuleInitializer?} fn
 	 */
 	function define (name, reqs, fn) {
+		if (typeof name === "function" && !nextName)
+			throw new Error("Cannot define module without a name")
+
+		if (typeof name === "function")
+			fn = name, name = /** @type {string} */ (nextName), nextName = undefined
+
 		if (Array.isArray(name)) {
 			fn = /** @type {ModuleInitializer} */ (reqs)
 			reqs = name
@@ -124,6 +132,9 @@
 	}
 
 	define.amd = true
+	define.nameNext = function (name) {
+		nextName = name
+	}
 
 	/**
 	 * @param {string} name 
