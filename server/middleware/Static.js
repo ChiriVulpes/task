@@ -11,6 +11,7 @@ var RewriteCheckType;
 (function (RewriteCheckType) {
     RewriteCheckType[RewriteCheckType["Equals"] = 0] = "Equals";
     RewriteCheckType[RewriteCheckType["StartsWith"] = 1] = "StartsWith";
+    RewriteCheckType[RewriteCheckType["EndsWith"] = 2] = "EndsWith";
 })(RewriteCheckType || (RewriteCheckType = {}));
 let rewrites;
 function getRewriteChecks(definition) {
@@ -19,6 +20,7 @@ function getRewriteChecks(definition) {
     const equalsToken = 'http.request.uri.path eq "';
     const notEqualsToken = 'http.request.uri.path ne "';
     const startsWithToken = 'starts_with(http.request.uri.path, "';
+    const endsWithToken = 'ends_with(http.request.uri.path, "';
     return rewrites = (definition.spaIndexRewrite?.slice(1, -1) ?? '').split(' and ')
         .map(expr => {
         const check = {};
@@ -29,6 +31,10 @@ function getRewriteChecks(definition) {
         if (expr.startsWith(startsWithToken)) {
             check.type = RewriteCheckType.StartsWith;
             check.compare = expr.slice(startsWithToken.length, -2);
+        }
+        if (expr.startsWith(endsWithToken)) {
+            check.type = RewriteCheckType.EndsWith;
+            check.compare = expr.slice(endsWithToken.length, -2);
         }
         if (expr.startsWith(equalsToken)) {
             check.type = RewriteCheckType.Equals;
@@ -45,23 +51,27 @@ function getRewriteChecks(definition) {
 //#endregion
 ////////////////////////////////////
 exports.default = (0, Middleware_1.default)((definition, req, res) => {
-    if (req.url === '/' || req.url.startsWith('/?'))
-        req.url = definition.serverIndex ?? '/index.html';
+    let [url] = req.url.split('?');
+    if (url === '/' || url.startsWith('/?'))
+        url = definition.serverIndex ?? '/index.html';
     const rewrites = getRewriteChecks(definition);
     const shouldRewrite = rewrites.every(rewrite => {
         let result;
         switch (rewrite.type) {
             case RewriteCheckType.Equals:
-                result = rewrite.compare === req.url;
+                result = rewrite.compare === url;
                 break;
             case RewriteCheckType.StartsWith:
-                result = req.url.startsWith(rewrite.compare);
+                result = url.startsWith(rewrite.compare);
+                break;
+            case RewriteCheckType.EndsWith:
+                result = url.endsWith(rewrite.compare);
                 break;
         }
         return rewrite.not ? !result : result;
     });
     if (shouldRewrite)
-        req.url = definition.serverIndex ?? '/index.html';
-    req.url = `.${req.url}`;
-    return (0, SendFile_1.default)(definition, req, res, req.url);
+        url = definition.serverIndex ?? '/index.html';
+    url = `.${url}`;
+    return (0, SendFile_1.default)(definition, req, res, url);
 });

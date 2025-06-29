@@ -43,9 +43,14 @@ const E404_1 = __importDefault(require("../middleware/E404"));
 async function default_1(definition, req, res, filePath) {
     const dirname = path.dirname(filePath);
     const basename = path.basename(filePath).replace(/\?.*$/, '');
-    const fullPath = path.resolve(definition.root, dirname, basename);
+    let fullPath = path.resolve(definition.root, dirname, basename);
     // Use await with catch to handle errors directly
-    let buffer = await fs.readFile(fullPath).catch(() => undefined);
+    let buffer = await fs.readFile(fullPath)
+        .catch(() => {
+        fullPath = `${fullPath}/index.html`;
+        return fs.readFile(fullPath);
+    })
+        .catch(() => undefined);
     if (buffer === undefined)
         // If fileContent is undefined, file was not found or error occurred
         return (0, E404_1.default)(definition, req, res);
