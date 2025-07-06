@@ -41,6 +41,7 @@ const ansicolor_1 = __importDefault(require("ansicolor"));
 const child_process_1 = require("child_process");
 const chokidar_1 = __importDefault(require("chokidar"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const tsconfigpaths = __importStar(require("tsconfig-paths"));
 const Hash_1 = __importDefault(require("./Hash"));
@@ -147,8 +148,9 @@ const taskApi = {
             });
         }
     },
-    watch(globs, task, delay = 0) {
-        chokidar_1.default.watch(globs, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 100 } })
+    async watch(globs, task, delay = 0) {
+        const paths = await Array.fromAsync(promises_1.default.glob(globs));
+        chokidar_1.default.watch(paths, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 100 } })
             // eslint-disable-next-line @typescript-eslint/no-misused-promises
             .on('all', async (event, path) => {
             await sleep(delay);
@@ -184,7 +186,65 @@ const taskApi = {
             });
         });
     },
+    install,
 };
+async function install(...projects) {
+    const root = process.cwd();
+    const parsedLinks = !process.env.TASK_INSTALL_LINK ? []
+        : process.env.TASK_INSTALL_LINK.split(/\s+/g)
+            .map(link => {
+            link = link.trim();
+            const ei = link.indexOf('=');
+            if (ei === -1)
+                throw new Error(`Invalid link format: "${link}"`);
+            let name = link.slice(0, ei).trim();
+            const linkPath = link.slice(ei + 1).trim();
+            let projectName = !name.includes('/') ? '.' : path_1.default.dirname(name);
+            projectName = projectName.startsWith('./') ? projectName.slice(2) : projectName;
+            name = !name.includes('/') ? name : path_1.default.basename(name);
+            return [projectName, { name, linkPath }];
+        });
+    const linksByProject = Object.entries(Object.groupBy(parsedLinks, ([projectName]) => projectName))
+        .map(([projectName, links]) => [
+        projectName,
+        Object.fromEntries(links.map(([, link]) => [link.name, link.linkPath])),
+    ]);
+    const links = Object.fromEntries(linksByProject);
+    for (const project of projects) {
+        process.chdir(root);
+        process.chdir(project.path);
+        const toUpdate = Object.entries(project.dependencies ?? {});
+        if (!toUpdate.length) {
+            await this.exec('NPM:PATH:npm', 'install', '--no-audit', '--no-fund');
+            continue;
+        }
+        const packageJsonString = await promises_1.default.readFile('./package.json', 'utf8');
+        const packageListString = toUpdate.map(([name]) => ansicolor_1.default.lightCyan(name)).join(', ');
+        Log_1.default.info(`Fetching latest versions of ${packageListString}...`);
+        const toInstall = await Promise.all(toUpdate.map(async ([name, { path, branch }]) => {
+            let response = '';
+            const branchArg = branch ? `refs/heads/${branch}` : 'HEAD';
+            await this.exec({ stdout: data => response += data.toString() }, 'PATH:git', 'ls-remote', `https://github.com/${path}.git`, branchArg);
+            const sha = response.trim().split(/\s+/)[0];
+            if (!sha)
+                throw new Error(`Failed to get SHA of latest commit of ${name} repository`);
+            return [name, path, sha];
+        }));
+        Log_1.default.info(`Uninstalling ${packageListString}...`);
+        await this.exec('NPM:PATH:npm', 'uninstall', ...toUpdate.map(([name]) => name), '--save', '--no-audit', '--no-fund');
+        Log_1.default.info(`Installing ${toInstall.map(([name, , sha]) => ansicolor_1.default.lightCyan(`${name}#${sha.slice(0, 7)}`)).join(', ')}...`);
+        await this.exec('NPM:PATH:npm', 'install', ...toInstall.map(([name, path, sha]) => `github:${path}#${sha}`), '--save-dev', '--no-audit', '--no-fund');
+        const projectLinks = links[project.path] ?? {};
+        const localLinkNames = Object.keys(projectLinks);
+        Log_1.default.info(`Linking local ${localLinkNames.map(name => ansicolor_1.default.lightCyan(name)).join(', ')}...`);
+        const localLinkPaths = Object.values(projectLinks).map(pathname => path_1.default.resolve(root, '..', pathname));
+        await this.exec('NPM:PATH:npm', 'link', ...localLinkPaths, '--no-audit', '--no-fund');
+        await promises_1.default.writeFile('./package.json', packageJsonString, 'utf8');
+    }
+    process.chdir(root);
+}
+//#endregion
+////////////////////////////////////
 function wrapQuotes(value) {
     if (!value.includes(' '))
         return value;

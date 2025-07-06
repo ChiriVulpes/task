@@ -17,4 +17,14 @@ export interface ITaskApi {
     watch(globs: string | string[], task: TaskFunctionDef<unknown, [string]>, delay?: number): void;
     exec(command: string, ...args: string[]): Promise<void>;
     exec(options: ITaskCLIOptions, command: string, ...args: string[]): Promise<void>;
+    install(...packages: Project[]): Promise<void>;
 }
+interface Project {
+    path: string;
+    dependencies?: Record<string, Dependency>;
+}
+interface Dependency {
+    path: string;
+    branch?: string;
+}
+export {};
