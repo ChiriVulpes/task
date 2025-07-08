@@ -6,6 +6,7 @@ import chokidar from 'chokidar'
 import dotenv from 'dotenv'
 import fs from 'fs/promises'
 import path from 'path'
+import { glob } from 'tinyglobby'
 import * as tsconfigpaths from 'tsconfig-paths'
 import Hash from './Hash'
 import Log from './Log'
@@ -154,7 +155,7 @@ const taskApi: ITaskApi = {
 		}
 	},
 	async watch (globs, task, delay = 0) {
-		const paths = await Array.fromAsync(fs.glob(globs))
+		const paths = await glob(globs)
 		chokidar.watch(paths, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 100 } })
 			// eslint-disable-next-line @typescript-eslint/no-misused-promises
 			.on('all', async (event, path) => {
