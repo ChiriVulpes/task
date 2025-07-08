@@ -43,6 +43,7 @@ const chokidar_1 = __importDefault(require("chokidar"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
+const tinyglobby_1 = require("tinyglobby");
 const tsconfigpaths = __importStar(require("tsconfig-paths"));
 const Hash_1 = __importDefault(require("./Hash"));
 const Log_1 = __importDefault(require("./Log"));
@@ -149,7 +150,7 @@ const taskApi = {
         }
     },
     async watch(globs, task, delay = 0) {
-        const paths = await Array.fromAsync(promises_1.default.glob(globs));
+        const paths = await (0, tinyglobby_1.glob)(globs);
         chokidar_1.default.watch(paths, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 100 } })
             // eslint-disable-next-line @typescript-eslint/no-misused-promises
             .on('all', async (event, path) => {
