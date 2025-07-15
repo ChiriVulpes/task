@@ -320,6 +320,7 @@ process.on('unhandledRejection', onError)
 
 class OwnError extends Error { }
 
+const cwd = process.cwd()
 const [, , ...tasks] = process.argv
 void (async () => {
 	let errors: number | undefined
@@ -335,7 +336,7 @@ void (async () => {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-require-imports
 				let taskFunction;
 				try {
-					taskFunction = require(path.join(process.cwd(), `./task/${task}.ts`))?.default
+					taskFunction = require(path.join(cwd, `./task/${task}.ts`))?.default
 				} catch (err) {
 					if (err && (err as any).code !== 'MODULE_NOT_FOUND')
 						throw err
@@ -346,6 +347,7 @@ void (async () => {
 
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 				await taskApi.run(taskFunction)
+				process.chdir(cwd)
 				continue
 			}
 
