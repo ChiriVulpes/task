@@ -294,7 +294,7 @@ void (async () => {
                 continue;
             }
             await new Promise((resolve, reject) => {
-                const p = (0, child_process_1.spawn)('npx', ['ts-node', `"${__filename}"`, task], { shell: true, stdio: 'inherit' });
+                const p = (0, child_process_1.spawn)('node', [`"${__filename}"`, task], { shell: true, stdio: 'inherit' });
                 p.on('error', reject);
                 p.on('close', code => {
                     if (code)
