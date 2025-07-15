@@ -283,7 +283,7 @@ void (async () => {
                     taskFunction = require(path_1.default.join(cwd, `./task/${task}.ts`))?.default;
                 }
                 catch (err) {
-                    if (err && err.code !== 'MODULE_NOT_FOUND')
+                    if (err && err.code !== 'MODULE_NOT_FOUND' || !err.message?.includes(`task/${task}.ts`))
                         throw err;
                 }
                 if (!taskFunction)
