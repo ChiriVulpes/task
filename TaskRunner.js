@@ -163,7 +163,8 @@ const taskApi = {
     exec(options, command, ...args) {
         return new Promise((resolve, reject) => {
             if (typeof options === 'string') {
-                args.unshift(command);
+                if (command)
+                    args.unshift(command);
                 command = options;
                 options = {};
             }
