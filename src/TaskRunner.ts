@@ -169,7 +169,9 @@ const taskApi: ITaskApi = {
 	exec (options, command, ...args) {
 		return new Promise<void>((resolve, reject) => {
 			if (typeof options === 'string') {
-				args.unshift(command!)
+				if (command)
+					args.unshift(command)
+
 				command = options
 				options = {}
 			}
