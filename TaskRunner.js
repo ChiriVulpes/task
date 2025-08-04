@@ -221,26 +221,39 @@ async function install(...projects) {
             continue;
         }
         const packageJsonString = await promises_1.default.readFile('./package.json', 'utf8');
-        const packageListString = toUpdate.map(([name]) => ansicolor_1.default.lightCyan(name)).join(', ');
-        Log_1.default.info(`Fetching latest versions of ${packageListString}...`);
-        const toInstall = await Promise.all(toUpdate.map(async ([name, { path, branch }]) => {
-            let response = '';
-            const branchArg = branch ? `refs/heads/${branch}` : 'HEAD';
-            await this.exec({ stdout: data => response += data.toString() }, 'PATH:git', 'ls-remote', `https://github.com/${path}.git`, branchArg);
-            const sha = response.trim().split(/\s+/)[0];
-            if (!sha)
-                throw new Error(`Failed to get SHA of latest commit of ${name} repository`);
-            return [name, path, sha];
-        }));
-        Log_1.default.info(`Uninstalling ${packageListString}...`);
-        await this.exec('NPM:PATH:npm', 'uninstall', ...toUpdate.map(([name]) => name), '--save', '--no-audit', '--no-fund');
-        Log_1.default.info(`Installing ${toInstall.map(([name, , sha]) => ansicolor_1.default.lightCyan(`${name}#${sha.slice(0, 7)}`)).join(', ')}...`);
-        await this.exec('NPM:PATH:npm', 'install', ...toInstall.map(([name, path, sha]) => `github:${path}#${sha}`), '--save-dev', '--no-audit', '--no-fund');
+        const gitToUpdate = toUpdate.filter(([, dep]) => 'repo' in dep);
+        const gitPackageListString = gitToUpdate.map(([name]) => ansicolor_1.default.lightCyan(name)).join(', ');
+        if (gitPackageListString)
+            Log_1.default.info(`Fetching latest versions of ${gitPackageListString}...`);
+        const gitToInstall = !gitPackageListString ? []
+            : await Promise.all(gitToUpdate.map(async ([name, { repo: path, branch }]) => {
+                let response = '';
+                const branchArg = branch ? `refs/heads/${branch}` : 'HEAD';
+                await this.exec({ stdout: data => response += data.toString() }, 'PATH:git', 'ls-remote', `https://github.com/${path}.git`, branchArg);
+                const sha = response.trim().split(/\s+/)[0];
+                if (!sha)
+                    throw new Error(`Failed to get SHA of latest commit of ${name} repository`);
+                return [name, path, sha];
+            }));
+        if (gitPackageListString) {
+            Log_1.default.info(`Uninstalling ${gitPackageListString}...`);
+            await this.exec('NPM:PATH:npm', 'uninstall', ...gitToUpdate.map(([name]) => name), '--save', '--no-audit', '--no-fund');
+        }
+        const gitToInstallText = gitToInstall.map(([name, , sha]) => ansicolor_1.default.lightCyan(`${name}#${sha.slice(0, 7)}`)).join(', ');
+        const npmToUpdate = toUpdate.filter(([, dep]) => 'name' in dep);
+        const npmToInstall = npmToUpdate.map(([name, { name: packageName, tag }]) => {
+            return [name, packageName, tag];
+        });
+        const npmToInstallText = npmToInstall.map(([name, packageName, tag]) => ansicolor_1.default.lightCyan(`${packageName}${tag ? `@${tag}` : ''}`)).join(', ');
+        Log_1.default.info(`Installing ${gitToInstallText}${gitToInstallText && npmToInstallText ? ', ' : ''}${npmToInstallText}...`);
+        await this.exec('NPM:PATH:npm', 'install', ...gitToInstall.map(([name, path, sha]) => `github:${path}#${sha}`), ...npmToInstall.map(([, name, tag]) => tag ? `${name}@${tag ?? 'latest'}` : name), '--save-dev', '--no-audit', '--no-fund', '--prefer-online');
         const projectLinks = links[project.path] ?? {};
         const localLinkNames = Object.keys(projectLinks);
-        Log_1.default.info(`Linking local ${localLinkNames.map(name => ansicolor_1.default.lightCyan(name)).join(', ')}...`);
-        const localLinkPaths = Object.values(projectLinks).map(pathname => path_1.default.resolve(root, '..', pathname));
-        await this.exec('NPM:PATH:npm', 'link', ...localLinkPaths, '--no-audit', '--no-fund');
+        if (localLinkNames.length) {
+            Log_1.default.info(`Linking local ${localLinkNames.map(name => ansicolor_1.default.lightCyan(name)).join(', ')}...`);
+            const localLinkPaths = Object.values(projectLinks).map(pathname => path_1.default.resolve(root, '..', pathname));
+            await this.exec('NPM:PATH:npm', 'link', ...localLinkPaths, '--no-audit', '--no-fund');
+        }
         await promises_1.default.writeFile('./package.json', packageJsonString, 'utf8');
     }
     process.chdir(root);

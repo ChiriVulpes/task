@@ -21,10 +21,14 @@ export interface ITaskApi {
 }
 interface Project {
     path: string;
-    dependencies?: Record<string, Dependency>;
+    dependencies?: Record<string, GitHubDependency | NPMDependency>;
 }
-interface Dependency {
-    path: string;
+interface NPMDependency {
+    name: string;
+    tag?: string;
+}
+interface GitHubDependency {
+    repo: string;
     branch?: string;
 }
 export {};
