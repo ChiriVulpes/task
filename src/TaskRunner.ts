@@ -272,7 +272,7 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 				await this.exec({ stdout: data => response += data.toString() }, 'PATH:git', 'ls-remote', `https://github.com/${path}.git`, branchArg)
 				const sha = response.trim().split(/\s+/)[0]
 				if (!sha)
-					throw new Error(`Failed to get SHA of latest commit of ${name} repository`)
+					throw new Error(`Failed to get SHA of latest commit of ${name} repository. ls-remote response: "${response}"`)
 
 				return [name, path, sha]
 			}))
