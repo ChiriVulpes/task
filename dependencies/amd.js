@@ -69,7 +69,10 @@
 			if (!src)
 				throw new Error("Cannot define module without a name")
 
-			name = src.startsWith("./") ? src.slice(2) : src.startsWith("/") ? src.slice(1) : src
+			name = src.startsWith("./") ? src.slice(2)
+				: src.startsWith("/") ? src.slice(1)
+					: src.startsWith(`${location.origin}/`) ? src.slice(location.origin.length + 1)
+						: src
 			const qIndex = name.indexOf("?")
 			name = qIndex === -1 ? name : name.slice(0, qIndex)
 			name = baseURL && name.startsWith(baseURL) ? name.slice(baseURL.length) : name
