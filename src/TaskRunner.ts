@@ -349,6 +349,11 @@ const [, , ...tasks] = process.argv
 void (async () => {
 	let errors: number | undefined
 	let remainingInMain = false
+	const shouldPassParams = tasks.indexOf("--params")
+	const params = shouldPassParams <= 0 ? [] : tasks.slice(shouldPassParams + 1)
+	if (shouldPassParams > 0)
+		tasks.splice(shouldPassParams, Infinity)
+
 	for (const task of tasks) {
 		if (task === '--') {
 			remainingInMain = true
@@ -370,7 +375,7 @@ void (async () => {
 					throw new OwnError(`No task function found by name "${task}"`)
 
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-				await taskApi.run(taskFunction)
+				await taskApi.run(taskFunction, ...params)
 				process.chdir(cwd)
 				continue
 			}
