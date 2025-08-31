@@ -166,15 +166,19 @@ const taskApi: ITaskApi = {
 				this.debounce(task, path)
 			})
 	},
-	exec (options, command, ...args) {
-		return new Promise<void>((resolve, reject) => {
-			if (typeof options === 'string') {
-				if (command)
-					args.unshift(command)
+	async exec (options, command, ...args) {
+		if (typeof options === 'string') {
+			if (command)
+				args.unshift(command)
 
-				command = options
-				options = {}
-			}
+			command = options
+			options = {}
+		}
+
+		if (options.cwd && !await fs.stat(options.cwd).then(stat => stat.isDirectory()).catch(() => false))
+			throw new Error(`Cannot exec here, not a directory or does not exist: '${options.cwd}'`)
+
+		return new Promise<void>((resolve, reject) => {
 
 			command = command!
 
