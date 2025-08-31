@@ -160,14 +160,16 @@ const taskApi = {
             this.debounce(task, path);
         });
     },
-    exec(options, command, ...args) {
+    async exec(options, command, ...args) {
+        if (typeof options === 'string') {
+            if (command)
+                args.unshift(command);
+            command = options;
+            options = {};
+        }
+        if (options.cwd && !await promises_1.default.stat(options.cwd).then(stat => stat.isDirectory()).catch(() => false))
+            throw new Error(`Cannot exec here, not a directory or does not exist: '${options.cwd}'`);
         return new Promise((resolve, reject) => {
-            if (typeof options === 'string') {
-                if (command)
-                    args.unshift(command);
-                command = options;
-                options = {};
-            }
             command = command;
             if (command.startsWith('NPM:'))
                 command = `${command.slice(4)}${process.platform === 'win32' ? '.cmd' : ''}`;
