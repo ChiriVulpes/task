@@ -273,10 +273,20 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 			: await Promise.all(gitToUpdate.map(async ([name, { repo: path, branch }]) => {
 				let response = ''
 				const branchArg = branch ? `refs/heads/${branch}` : 'HEAD'
-				await this.exec({ stdout: data => response += data.toString() }, 'PATH:git', 'ls-remote', `https://github.com/${path}.git`, branchArg)
-				const sha = response.trim().split(/\s+/)[0]
+				let sha: string | undefined
+				for (let i = 0; i < 7; i++) {
+					await this.exec({ stdout: data => response += data.toString() }, 'PATH:git', 'ls-remote', `https://github.com/${path}.git`, branchArg)
+					sha = response.trim().split(/\s+/)[0]
+					if (!sha) {
+						console.error(`Failed to get SHA of latest commit of ${name} repository. ls-remote response: "${response}"`)
+						if (i < 6)
+							await sleep(1000 * (i ** 2))
+						continue
+					}
+				}
+
 				if (!sha)
-					throw new Error(`Failed to get SHA of latest commit of ${name} repository. ls-remote response: "${response}"`)
+					process.exit(1)
 
 				return [name, path, sha]
 			}))
