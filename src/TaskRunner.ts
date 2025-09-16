@@ -263,7 +263,7 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 			continue
 		}
 
-		const packageJsonString = await fs.readFile('./package.json', 'utf8')
+		const packageJson = JSON.parse(await fs.readFile('./package.json', 'utf8')) as { dependencies?: Record<string, string>, devDependencies?: Record<string, string> }
 
 		const gitToUpdate = toUpdate.filter(([, dep]) => 'repo' in dep) as [name: string, dep: GitHubDependency][]
 		const gitPackageListString = gitToUpdate.map(([name]) => ansi.lightCyan(name)).join(', ')
@@ -312,6 +312,21 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 			'--save-dev', '--no-audit', '--no-fund', '--prefer-online',
 		)
 
+		const installedPackageVersionNumbers = await fs.readFile('./package-lock.json', 'utf8')
+			.then(lockFile => {
+				const lockJson = JSON.parse(lockFile) as { packages: { '': { devDependencies?: Record<string, string> } } }
+				const devDependencies = lockJson.packages[''].devDependencies ?? {}
+				return Object.fromEntries(npmToInstall.map(([, name]) => [name, devDependencies[name]]))
+			})
+
+		for (const type of ['dependencies', 'devDependencies'] as const) {
+			for (const [, name] of npmToInstall) {
+				if (packageJson[type]?.[name]) {
+					packageJson[type]![name] = installedPackageVersionNumbers[name] ?? packageJson[type]![name]
+				}
+			}
+		}
+
 		const projectLinks = links[project.path] ?? {}
 		const localLinkNames = Object.keys(projectLinks)
 		if (localLinkNames.length) {
@@ -323,7 +338,7 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 			)
 		}
 
-		await fs.writeFile('./package.json', packageJsonString, 'utf8')
+		await fs.writeFile('./package.json', JSON.stringify(packageJson, null, '\t') + "\n", 'utf8')
 	}
 
 	process.chdir(root)
