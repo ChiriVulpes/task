@@ -222,7 +222,7 @@ async function install(...projects) {
             await this.exec('NPM:PATH:npm', 'install', '--no-audit', '--no-fund');
             continue;
         }
-        const packageJsonString = await promises_1.default.readFile('./package.json', 'utf8');
+        const packageJson = JSON.parse(await promises_1.default.readFile('./package.json', 'utf8'));
         const gitToUpdate = toUpdate.filter(([, dep]) => 'repo' in dep);
         const gitPackageListString = gitToUpdate.map(([name]) => ansicolor_1.default.lightCyan(name)).join(', ');
         if (gitPackageListString)
@@ -258,6 +258,19 @@ async function install(...projects) {
         const npmToInstallText = npmToInstall.map(([name, packageName, tag]) => ansicolor_1.default.lightCyan(`${packageName}${tag ? `@${tag}` : ''}`)).join(', ');
         Log_1.default.info(`Installing ${gitToInstallText}${gitToInstallText && npmToInstallText ? ', ' : ''}${npmToInstallText}...`);
         await this.exec('NPM:PATH:npm', 'install', ...gitToInstall.map(([name, path, sha]) => `github:${path}#${sha}`), ...npmToInstall.map(([, name, tag]) => tag ? `${name}@${tag ?? 'latest'}` : name), '--save-dev', '--no-audit', '--no-fund', '--prefer-online');
+        const installedPackageVersionNumbers = await promises_1.default.readFile('./package-lock.json', 'utf8')
+            .then(lockFile => {
+            const lockJson = JSON.parse(lockFile);
+            const devDependencies = lockJson.packages[''].devDependencies ?? {};
+            return Object.fromEntries(npmToInstall.map(([, name]) => [name, devDependencies[name]]));
+        });
+        for (const type of ['dependencies', 'devDependencies']) {
+            for (const [, name] of npmToInstall) {
+                if (packageJson[type]?.[name]) {
+                    packageJson[type][name] = installedPackageVersionNumbers[name] ?? packageJson[type][name];
+                }
+            }
+        }
         const projectLinks = links[project.path] ?? {};
         const localLinkNames = Object.keys(projectLinks);
         if (localLinkNames.length) {
@@ -265,7 +278,7 @@ async function install(...projects) {
             const localLinkPaths = Object.values(projectLinks).map(pathname => path_1.default.resolve(root, '..', pathname));
             await this.exec('NPM:PATH:npm', 'link', ...localLinkPaths, '--no-audit', '--no-fund');
         }
-        await promises_1.default.writeFile('./package.json', packageJsonString, 'utf8');
+        await promises_1.default.writeFile('./package.json', JSON.stringify(packageJson, null, '\t') + "\n", 'utf8');
     }
     process.chdir(root);
 }
