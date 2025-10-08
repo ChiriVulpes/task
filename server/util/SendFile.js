@@ -62,6 +62,7 @@ async function default_1(definition, req, res, filePath) {
     res.writeHead(200, {
         'Content-Type': contentType,
         'Content-Length': buffer.length,
+        'Access-Control-Allow-Origin': '*',
     });
     return res.end(buffer);
 }

@@ -23,7 +23,7 @@ async function Server(definition) {
             res.end('Internal Server Error');
         }
     }));
-    const port = +definition.port || 8095;
+    const port = +definition.port || process.env.PORT;
     const result = {
         async listen() {
             return new Promise(resolve => server.listen(port, resolve));
