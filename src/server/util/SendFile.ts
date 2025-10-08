@@ -31,6 +31,7 @@ export default async function (definition: Server.Definition, req: IncomingMessa
 	res.writeHead(200, {
 		'Content-Type': contentType,
 		'Content-Length': buffer.length,
+		'Access-Control-Allow-Origin': '*',
 	})
 	return res.end(buffer)
 }

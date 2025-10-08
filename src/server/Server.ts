@@ -43,7 +43,7 @@ async function Server (definition: Server.Definition) {
 		}),
 	)
 
-	const port = +definition.port! || 8095
+	const port = +definition.port! || process.env.PORT
 
 	const result: Server = {
 		async listen () {
