@@ -55,29 +55,35 @@
 	 * @param {ModuleInitializer?} fn
 	 */
 	function define (name, reqs, fn) {
-		if (typeof name === "function" && !nextName)
-			throw new Error("Cannot define module without a name")
+		if (typeof name === 'function' && !nextName)
+			throw new Error('Cannot define module without a name')
 
-		if (typeof name === "function")
+		if (typeof name === 'function')
 			fn = name, name = /** @type {string} */ (nextName), nextName = undefined
 
 		if (Array.isArray(name)) {
 			fn = /** @type {ModuleInitializer} */ (reqs)
 			reqs = name
 
-			const src = self.document?.currentScript?.getAttribute("src") || self.document?.currentScript?.getAttribute("data-src")
-			if (!src)
-				throw new Error("Cannot define module without a name")
+			if (nextName) {
+				name = nextName
+				nextName = undefined
+			}
+			else {
+				const src = self.document?.currentScript?.getAttribute('src') || self.document?.currentScript?.getAttribute('data-src')
+				if (!src)
+					throw new Error('Cannot define module without a name')
 
-			name = src.startsWith("./") ? src.slice(2)
-				: src.startsWith("/") ? src.slice(1)
-					: src.startsWith(`${location.origin}/`) ? src.slice(location.origin.length + 1)
-						: src
-			const qIndex = name.indexOf("?")
-			name = qIndex === -1 ? name : name.slice(0, qIndex)
-			name = baseURL && name.startsWith(baseURL) ? name.slice(baseURL.length) : name
-			name = name.endsWith(".js") ? name.slice(0, -3) : name
-			name = name.endsWith("/index") ? name.slice(0, -6) : name
+				name = src.startsWith('./') ? src.slice(2)
+					: src.startsWith('/') ? src.slice(1)
+						: src.startsWith(`${location.origin}/`) ? src.slice(location.origin.length + 1)
+							: src
+				const qIndex = name.indexOf('?')
+				name = qIndex === -1 ? name : name.slice(0, qIndex)
+				name = baseURL && name.startsWith(baseURL) ? name.slice(baseURL.length) : name
+				name = name.endsWith('.js') ? name.slice(0, -3) : name
+				name = name.endsWith('/index') ? name.slice(0, -6) : name
+			}
 		}
 
 		reqs ??= []
@@ -86,12 +92,20 @@
 		if (existingDefinition && !existingDefinition._allowRedefine)
 			throw new Error(`Module "${name}" cannot be redefined`)
 
-		if (typeof reqs === "function") {
+		if (typeof reqs === 'function') {
 			if (fn)
-				throw new Error("Unsupport define call")
+				throw new Error('Unsupport define call')
 
 			fn = reqs
 			reqs = []
+		}
+
+		if (reqs.length < 2 || reqs[0] !== 'require' || reqs[1] !== 'exports') {
+			if (reqs.length === 1 && reqs[0] === 'exports') {
+				reqs = ['require', 'exports']
+				const oldfn = fn
+				fn = (req, exp) => oldfn(exp)
+			}
 		}
 
 		const _requirements = reqs.slice(2).map(req => findModuleName(name, req))
@@ -107,8 +121,8 @@
 			_initializer: initialiser,
 			_init: self.document?.currentScript?.dataset.init === name,
 			_replace (newModule) {
-				if (typeof newModule !== "object" && typeof newModule !== "function")
-					throw new Error("Cannot assign module.exports to a non-object")
+				if (typeof newModule !== 'object' && typeof newModule !== 'function')
+					throw new Error('Cannot assign module.exports to a non-object')
 
 				newModule._name = name
 				newModule._state = ModuleState.Unprocessed
@@ -122,7 +136,7 @@
 		for (const req of module._requirements)
 			requirements.add(req)
 
-		const preload = name.endsWith("$preload")
+		const preload = name.endsWith('$preload')
 		if (preload) {
 			if (module._requirements.length)
 				throw new Error(`Module "${name}" cannot import other modules`)
@@ -158,13 +172,13 @@
 		requiredBy ??= []
 		let module = moduleMap.get(name)
 		if (!module) {
-			if (name.endsWith(".js"))
+			if (name.endsWith('.js'))
 				name = name.slice(0, -3)
 
-			if (name.startsWith(".")) {
+			if (name.startsWith('.')) {
 				let from = requiredBy[requiredBy.length - 1]
-				if (!from.includes("/"))
-					from += "/"
+				if (!from.includes('/'))
+					from += '/'
 
 				name = findModuleName(from, name)
 			}
@@ -234,8 +248,8 @@
 			module._state = ModuleState.Processed
 
 			injectModule(module)
-
-		} catch (err) {
+		}
+		catch (err) {
 			module._state = ModuleState.Error
 			module._error = err
 			err.message = `[Module initialization ${module._name}] ${err.message}`
@@ -252,12 +266,11 @@
 			Object.assign(self, { [moduleDefaultName]: inject })
 
 		for (const key of Object.keys(module)) {
-			if (key !== "default" && !key.startsWith("_") && isInjectableModuleDefaultNameRegex.test(key) && !(key in self)) {
+			if (key !== 'default' && !key.startsWith('_') && isInjectableModuleDefaultNameRegex.test(key) && !(key in self)) {
 				Object.assign(self, { [key]: module[key] })
 			}
 		}
 	}
-
 
 	////////////////////////////////////
 	// Add the above functions to "self"
@@ -279,16 +292,15 @@
 	extensibleSelf.allowRedefine = allowRedefine
 	extensibleSelf.hasModule = name => moduleMap.has(name)
 
-
 	////////////////////////////////////
 	// Actually process the modules
 	//
 
-	self.document?.addEventListener("DOMContentLoaded", processModules)
+	self.document?.addEventListener('DOMContentLoaded', processModules)
 
 	let initialProcessCompleted = false
 	async function processModules () {
-		const scriptsStillToImport = Array.from(self.document?.querySelectorAll("template[data-script]") ?? [])
+		const scriptsStillToImport = Array.from(self.document?.querySelectorAll('template[data-script]') ?? [])
 			.map(definition => {
 				const script = /** @type {HTMLTemplateElement} */ (definition).dataset.script
 				definition.remove()
@@ -296,7 +308,7 @@
 			})
 
 		await Promise.all(Array.from(new Set(scriptsStillToImport))
-			.filter((v) => v !== undefined)
+			.filter(v => v !== undefined)
 			.map(tryImportAdditionalModule)
 		)
 
@@ -332,10 +344,10 @@
 	 */
 	async function importAdditionalModule (req) {
 		if (self.document) {
-			const script = document.createElement("script")
+			const script = document.createElement('script')
 			document.head.appendChild(script)
 			/** @type {Promise<void>} */
-			const promise = new Promise(resolve => script.addEventListener("load", () => resolve()))
+			const promise = new Promise(resolve => script.addEventListener('load', () => resolve()))
 			script.src = `/script/${req}.js`
 			return promise
 		}
@@ -354,7 +366,7 @@
 			throw new Error(`No "${name}" module defined`)
 
 		if (module._state === ModuleState.Waiting)
-			throw new Error(`Circular dependency! Dependency chain: ${[...requiredBy, name].map(m => `"${m}"`).join(" > ")}`)
+			throw new Error(`Circular dependency! Dependency chain: ${[...requiredBy, name].map(m => `"${m}"`).join(' > ')}`)
 
 		if (!module._state) {
 			module._state = ModuleState.Waiting
@@ -368,7 +380,6 @@
 		return moduleMap.get(name)
 	}
 
-
 	////////////////////////////////////
 	// Utils
 	//
@@ -379,10 +390,10 @@
 	 */
 	function findModuleName (name, requirement) {
 		let root = dirname(name)
-		if (requirement.startsWith("./"))
+		if (requirement.startsWith('./'))
 			return join(root, requirement.slice(2))
 
-		while (requirement.startsWith("../"))
+		while (requirement.startsWith('../'))
 			root = dirname(root), requirement = requirement.slice(3)
 
 		return requirement // join(root, requirement);
@@ -392,15 +403,15 @@
 	 * @param {string} name 
 	 */
 	function dirname (name) {
-		const lastIndex = name.lastIndexOf("/")
-		return lastIndex === -1 ? "" : name.slice(0, lastIndex)
+		const lastIndex = name.lastIndexOf('/')
+		return lastIndex === -1 ? '' : name.slice(0, lastIndex)
 	}
 
 	/**
 	 * @param {string} name 
 	 */
 	function basename (name) {
-		const lastIndex = name.lastIndexOf("/")
+		const lastIndex = name.lastIndexOf('/')
 		return name.slice(lastIndex + 1)
 	}
 
@@ -408,6 +419,6 @@
 	 * @param  {...string} path 
 	 */
 	function join (...path) {
-		return path.filter(p => p).join("/")
+		return path.filter(p => p).join('/')
 	}
 })()
