@@ -234,7 +234,12 @@
 
 			module.require = require
 
+			const oldModuleName = extensibleSelf.__moduleName
+			extensibleSelf.__moduleName = module._name
 			const result = module._initializer(require, module, ...args)
+			if (extensibleSelf.__moduleName === module._name)
+				extensibleSelf.__moduleName = oldModuleName
+
 			if (module.default === undefined) {
 				module.default = result ?? module
 				module.__esModule = true
@@ -283,6 +288,7 @@
 	 * @property {typeof initializeModuleByName} initializeModule
 	 * @property {(name: string) => boolean} hasModule
 	 * @property {typeof allowRedefine} allowRedefine
+	 * @property {string | undefined} __moduleName
 	 */
 
 	const extensibleSelf = /** @type {Window & typeof globalThis & SelfExtensions} */(self)
