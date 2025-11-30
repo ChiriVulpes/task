@@ -282,15 +282,16 @@ async function install(...projects) {
         const projectLinks = links[project.path] ?? {};
         const localLinkNames = Object.keys(projectLinks);
         if (localLinkNames.length) {
+            const filesToPreservePreLink = ['./pnpm-lock.yaml', './pnpm-workspace.yaml'];
+            const preservedFilesContent = {};
+            for (const file of filesToPreservePreLink)
+                preservedFilesContent[file] = await promises_1.default.readFile(file, 'utf8');
             console.log('');
             Log_1.default.info(`Linking local ${localLinkNames.map(name => ansicolor_1.default.lightCyan(name)).join(', ')}...`);
             const localLinkPaths = Object.values(projectLinks).map(pathname => path_1.default.resolve(root, '..', pathname));
             await this.exec('NPM:PATH:pnpm', 'link', ...localLinkPaths);
-            for (const pnpmFile of ['./pnpm-lock.yaml', './pnpm-workspace.yaml']) {
-                const workspaceYaml = await promises_1.default.readFile(pnpmFile, 'utf8');
-                await promises_1.default.writeFile(pnpmFile, workspaceYaml
-                    .replaceAll(/(?<=\n)  [^ :]+?: link:[^\n]+\n/g, ''));
-            }
+            for (const pnpmFile of ['./pnpm-lock.yaml', './pnpm-workspace.yaml'])
+                await promises_1.default.writeFile(pnpmFile, preservedFilesContent[pnpmFile]);
         }
         await promises_1.default.writeFile('./package.json', JSON.stringify(packageJson, null, '\t') + "\n", 'utf8');
         console.log('');
