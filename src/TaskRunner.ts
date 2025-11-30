@@ -340,7 +340,7 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 		const projectLinks = links[project.path] ?? {}
 		const localLinkNames = Object.keys(projectLinks)
 		if (localLinkNames.length) {
-			const filesToPreservePreLink = ['./pnpm-lock.yaml', './pnpm-workspace.yaml']
+			const filesToPreservePreLink = ['./package.json', './pnpm-lock.yaml', './pnpm-workspace.yaml']
 			const preservedFilesContent: Record<string, string> = {}
 			for (const file of filesToPreservePreLink)
 				preservedFilesContent[file] = await fs.readFile(file, 'utf8')
@@ -352,11 +352,11 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 				...localLinkPaths,
 			)
 
-			for (const pnpmFile of ['./pnpm-lock.yaml', './pnpm-workspace.yaml'])
-				await fs.writeFile(pnpmFile, preservedFilesContent[pnpmFile])
+			for (const preservedFile of filesToPreservePreLink)
+				await fs.writeFile(preservedFile, preservedFilesContent[preservedFile])
 		}
 
-		await fs.writeFile('./package.json', JSON.stringify(packageJson, null, '\t') + "\n", 'utf8')
+		// await fs.writeFile('./package.json', JSON.stringify(packageJson, null, '\t') + "\n", 'utf8')
 
 		console.log('')
 	}
