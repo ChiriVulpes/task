@@ -346,6 +346,13 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 			await this.exec('NPM:PATH:pnpm', 'link',
 				...localLinkPaths,
 			)
+
+			for (const pnpmFile of ['./pnpm-lock.yaml', './pnpm-workspace.yaml']) {
+				const workspaceYaml = await fs.readFile(pnpmFile, 'utf8')
+				await fs.writeFile(pnpmFile, workspaceYaml
+					.replaceAll(/(?<=\n)  [^ :]+?: link:[^\n]+\n/g, '')
+				)
+			}
 		}
 
 		await fs.writeFile('./package.json', JSON.stringify(packageJson, null, '\t') + "\n", 'utf8')
