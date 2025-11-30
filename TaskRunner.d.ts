@@ -22,6 +22,7 @@ export interface ITaskApi {
 interface Project {
     path: string;
     dependencies?: Record<string, GitHubDependency | NPMDependency>;
+    devDependencies?: Record<string, GitHubDependency | NPMDependency>;
 }
 interface NPMDependency {
     name: string;

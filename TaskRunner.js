@@ -45,7 +45,6 @@ const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const tinyglobby_1 = require("tinyglobby");
 const tsconfigpaths = __importStar(require("tsconfig-paths"));
-const yaml_1 = __importDefault(require("yaml"));
 const Hash_1 = __importDefault(require("./Hash"));
 const Log_1 = __importDefault(require("./Log"));
 const Task_1 = __importDefault(require("./Task"));
@@ -220,64 +219,56 @@ async function install(...projects) {
         process.chdir(project.path);
         console.log('');
         Log_1.default.info(`Project: ${ansicolor_1.default.lightGreen(project.path)}`);
-        const toUpdate = Object.entries(project.dependencies ?? {});
-        if (!toUpdate.length) {
+        if (!Object.entries(project.dependencies ?? {}).length && !Object.entries(project.devDependencies ?? {}).length) {
             await this.exec('NPM:PATH:pnpm', 'install');
             continue;
         }
-        const packageJson = JSON.parse(await promises_1.default.readFile('./package.json', 'utf8'));
-        const gitToUpdate = toUpdate.filter(([, dep]) => 'repo' in dep);
-        const gitPackageListString = gitToUpdate.map(([name]) => ansicolor_1.default.lightCyan(name)).join(', ');
-        if (gitPackageListString) {
-            console.log('');
-            Log_1.default.info(`Fetching latest versions of ${gitPackageListString}...`);
-        }
-        const gitToInstall = !gitPackageListString ? []
-            : await Promise.all(gitToUpdate.map(async ([name, { repo: path, branch }]) => {
-                let response = '';
-                const branchArg = branch ? `refs/heads/${branch}` : 'HEAD';
-                let sha;
-                for (let i = 0; i < 7; i++) {
-                    await this.exec({ stdout: data => response += data.toString() }, 'PATH:git', 'ls-remote', `https://github.com/${path}.git`, branchArg);
-                    sha = response.trim().split(/\s+/)[0];
-                    if (!sha) {
-                        console.error(`Failed to get SHA of latest commit of ${name} repository. ls-remote response: "${response}"`);
-                        if (i < 6)
-                            await sleep(1000 * (i ** 2));
-                        continue;
-                    }
-                }
-                if (!sha)
-                    process.exit(1);
-                return [name, path, sha];
-            }));
-        if (gitPackageListString) {
-            console.log('');
-            Log_1.default.info(`Uninstalling ${gitPackageListString}...`);
-            await this.exec('NPM:PATH:pnpm', 'uninstall', ...gitToUpdate.map(([name]) => name));
-        }
-        const gitToInstallText = gitToInstall.map(([name, , sha]) => ansicolor_1.default.lightCyan(`${name}#${sha.slice(0, 7)}`)).join(', ');
-        const npmToUpdate = toUpdate.filter(([, dep]) => 'name' in dep);
-        const npmToInstall = npmToUpdate.map(([name, { name: packageName, tag }]) => {
-            return [name, packageName, tag];
-        });
-        const npmToInstallText = npmToInstall.map(([name, packageName, tag]) => ansicolor_1.default.lightCyan(`${packageName}${tag ? `@${tag}` : ''}`)).join(', ');
-        console.log('');
-        Log_1.default.info(`Installing ${gitToInstallText}${gitToInstallText && npmToInstallText ? ', ' : ''}${npmToInstallText}...`);
-        await this.exec('NPM:PATH:pnpm', 'add', ...gitToInstall.map(([name, path, sha]) => `github:${path}#${sha}`), ...npmToInstall.map(([, name, tag]) => tag ? `${name}@${tag ?? 'latest'}` : name), '--save-dev');
-        await this.exec('NPM:PATH:pnpm', 'update', ...npmToInstall.filter(([, , tag]) => !tag).map(([, name]) => name));
-        const installedPackageVersionNumbers = await promises_1.default.readFile('./pnpm-lock.yaml', 'utf8')
-            .then(lockFile => {
-            const lockJson = yaml_1.default.parse(lockFile);
-            const devDependencies = lockJson.importers['.'].devDependencies ?? {};
-            return Object.fromEntries(npmToInstall.map(([, name]) => [name, devDependencies[name].specifier]));
-        });
-        for (const type of ['dependencies', 'devDependencies']) {
-            for (const [, name] of npmToInstall) {
-                if (packageJson[type]?.[name]) {
-                    packageJson[type][name] = installedPackageVersionNumbers[name] ?? packageJson[type][name];
-                }
+        for (const depType of ['dependencies', 'devDependencies']) {
+            if (!project[depType])
+                continue;
+            const toUpdate = Object.entries(project[depType] ?? {});
+            if (!toUpdate.length)
+                continue;
+            const gitToUpdate = toUpdate.filter(([, dep]) => 'repo' in dep);
+            const gitPackageListString = gitToUpdate.map(([name]) => ansicolor_1.default.lightCyan(name)).join(', ');
+            if (gitPackageListString) {
+                console.log('');
+                Log_1.default.info(`Fetching latest versions of ${depType} ${gitPackageListString}...`);
             }
+            const gitToInstall = !gitPackageListString ? []
+                : await Promise.all(gitToUpdate.map(async ([name, { repo: path, branch }]) => {
+                    let response = '';
+                    const branchArg = branch ? `refs/heads/${branch}` : 'HEAD';
+                    let sha;
+                    for (let i = 0; i < 7; i++) {
+                        await this.exec({ stdout: data => response += data.toString() }, 'PATH:git', 'ls-remote', `https://github.com/${path}.git`, branchArg);
+                        sha = response.trim().split(/\s+/)[0];
+                        if (!sha) {
+                            console.error(`Failed to get SHA of latest commit of ${name} repository. ls-remote response: "${response}"`);
+                            if (i < 6)
+                                await sleep(1000 * (i ** 2));
+                            continue;
+                        }
+                    }
+                    if (!sha)
+                        process.exit(1);
+                    return [name, path, sha];
+                }));
+            if (gitPackageListString) {
+                console.log('');
+                Log_1.default.info(`Uninstalling ${depType} ${gitPackageListString}...`);
+                await this.exec('NPM:PATH:pnpm', 'uninstall', ...gitToUpdate.map(([name]) => name));
+            }
+            const gitToInstallText = gitToInstall.map(([name, , sha]) => ansicolor_1.default.lightCyan(`${name}#${sha.slice(0, 7)}`)).join(', ');
+            const npmToUpdate = toUpdate.filter(([, dep]) => 'name' in dep);
+            const npmToInstall = npmToUpdate.map(([name, { name: packageName, tag }]) => {
+                return [name, packageName, tag];
+            });
+            const npmToInstallText = npmToInstall.map(([name, packageName, tag]) => ansicolor_1.default.lightCyan(`${packageName}${tag ? `@${tag}` : ''}`)).join(', ');
+            console.log('');
+            Log_1.default.info(`Installing ${depType} ${gitToInstallText}${gitToInstallText && npmToInstallText ? ', ' : ''}${npmToInstallText}...`);
+            await this.exec('NPM:PATH:pnpm', 'add', ...gitToInstall.map(([name, path, sha]) => `github:${path}#${sha}`), ...npmToInstall.map(([, name, tag]) => tag ? `${name}@${tag ?? 'latest'}` : name), depType === 'devDependencies' ? '--save-dev' : '--save-prod');
+            await this.exec('NPM:PATH:pnpm', 'update', ...npmToInstall.filter(([, , tag]) => !tag).map(([, name]) => name));
         }
         const projectLinks = links[project.path] ?? {};
         const localLinkNames = Object.keys(projectLinks);
@@ -293,7 +284,6 @@ async function install(...projects) {
             for (const preservedFile of filesToPreservePreLink)
                 await promises_1.default.writeFile(preservedFile, preservedFilesContent[preservedFile]);
         }
-        // await fs.writeFile('./package.json', JSON.stringify(packageJson, null, '\t') + "\n", 'utf8')
         console.log('');
     }
     for (const project of projects) {

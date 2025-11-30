@@ -35,9 +35,6 @@ importers:
       ws:
         specifier: 8.18.0
         version: 8.18.0
-      yaml:
-        specifier: 2.8.1
-        version: 2.8.1
 
 packages:
 
@@ -485,11 +482,6 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
-
-  yaml@2.8.1:
-    resolution: {integrity: sha512-lcYcMxX2PO9XMGvAJkJ3OsNMw+/7FKes7/hgerGUYWIoWu5j/+YQqcZr5JnPZWzOsEBgMbSbiSTn/dv/69Mkpw==}
-    engines: {node: '>= 14.6'}
-    hasBin: true
 
 snapshots:
 
@@ -963,5 +955,3 @@ snapshots:
       minimalistic-assert: 1.0.1
 
   ws@8.18.0: {}
-
-  yaml@2.8.1: {}
