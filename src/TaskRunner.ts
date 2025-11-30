@@ -8,6 +8,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import { glob } from 'tinyglobby'
 import * as tsconfigpaths from 'tsconfig-paths'
+import YAML from 'yaml'
 import Hash from './Hash'
 import Log from './Log'
 import type { TaskFunction, TaskFunctionDef } from './Task'
@@ -256,10 +257,12 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 	for (const project of projects) {
 		process.chdir(root)
 		process.chdir(project.path)
+		console.log('')
+		Log.info(`Project: ${ansi.lightGreen(project.path)}`)
 
 		const toUpdate = Object.entries(project.dependencies ?? {})
 		if (!toUpdate.length) {
-			await this.exec('NPM:PATH:npm', 'install', '--no-audit', '--no-fund')
+			await this.exec('NPM:PATH:pnpm', 'install')
 			continue
 		}
 
@@ -267,8 +270,10 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 
 		const gitToUpdate = toUpdate.filter(([, dep]) => 'repo' in dep) as [name: string, dep: GitHubDependency][]
 		const gitPackageListString = gitToUpdate.map(([name]) => ansi.lightCyan(name)).join(', ')
-		if (gitPackageListString)
+		if (gitPackageListString) {
+			console.log('')
 			Log.info(`Fetching latest versions of ${gitPackageListString}...`)
+		}
 		const gitToInstall: [name: string, path: string, sha: string][] = !gitPackageListString ? []
 			: await Promise.all(gitToUpdate.map(async ([name, { repo: path, branch }]) => {
 				let response = ''
@@ -292,8 +297,9 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 			}))
 
 		if (gitPackageListString) {
+			console.log('')
 			Log.info(`Uninstalling ${gitPackageListString}...`)
-			await this.exec('NPM:PATH:npm', 'uninstall', ...gitToUpdate.map(([name]) => name), '--save', '--no-audit', '--no-fund')
+			await this.exec('NPM:PATH:pnpm', 'uninstall', ...gitToUpdate.map(([name]) => name))
 		}
 
 		const gitToInstallText = gitToInstall.map(([name, , sha]) => ansi.lightCyan(`${name}#${sha.slice(0, 7)}`)).join(', ')
@@ -305,18 +311,22 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 
 		const npmToInstallText = npmToInstall.map(([name, packageName, tag]) => ansi.lightCyan(`${packageName}${tag ? `@${tag}` : ''}`)).join(', ')
 
+		console.log('')
 		Log.info(`Installing ${gitToInstallText}${gitToInstallText && npmToInstallText ? ', ' : ''}${npmToInstallText}...`)
-		await this.exec('NPM:PATH:npm', 'install',
+		await this.exec('NPM:PATH:pnpm', 'add',
 			...gitToInstall.map(([name, path, sha]) => `github:${path}#${sha}`),
 			...npmToInstall.map(([, name, tag]) => tag ? `${name}@${tag ?? 'latest'}` : name),
-			'--save-dev', '--no-audit', '--no-fund', '--prefer-online',
+			'--save-dev',
+		)
+		await this.exec('NPM:PATH:pnpm', 'update',
+			...npmToInstall.filter(([, , tag]) => !tag).map(([, name]) => name),
 		)
 
-		const installedPackageVersionNumbers = await fs.readFile('./package-lock.json', 'utf8')
+		const installedPackageVersionNumbers = await fs.readFile('./pnpm-lock.yaml', 'utf8')
 			.then(lockFile => {
-				const lockJson = JSON.parse(lockFile) as { packages: { '': { devDependencies?: Record<string, string> } } }
-				const devDependencies = lockJson.packages[''].devDependencies ?? {}
-				return Object.fromEntries(npmToInstall.map(([, name]) => [name, devDependencies[name]]))
+				const lockJson = YAML.parse(lockFile) as { importers: { '.': { devDependencies?: Record<string, { specifier: string }> } } }
+				const devDependencies = lockJson.importers['.'].devDependencies ?? {}
+				return Object.fromEntries(npmToInstall.map(([, name]) => [name, devDependencies[name].specifier]))
 			})
 
 		for (const type of ['dependencies', 'devDependencies'] as const) {
@@ -330,17 +340,28 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 		const projectLinks = links[project.path] ?? {}
 		const localLinkNames = Object.keys(projectLinks)
 		if (localLinkNames.length) {
+			console.log('')
 			Log.info(`Linking local ${localLinkNames.map(name => ansi.lightCyan(name)).join(', ')}...`)
 			const localLinkPaths = Object.values(projectLinks).map(pathname => path.resolve(root, '..', pathname))
-			await this.exec('NPM:PATH:npm', 'link',
+			await this.exec('NPM:PATH:pnpm', 'link',
 				...localLinkPaths,
-				'--no-audit', '--no-fund'
 			)
 		}
 
 		await fs.writeFile('./package.json', JSON.stringify(packageJson, null, '\t') + "\n", 'utf8')
+
+		console.log('')
 	}
 
+	for (const project of projects) {
+		process.chdir(root)
+		process.chdir(project.path)
+		console.log('')
+		Log.info(`Auditing ${ansi.lightGreen(project.path)}`)
+		await this.exec('NPM:PATH:pnpm', 'audit')
+	}
+
+	console.log('')
 	process.chdir(root)
 }
 

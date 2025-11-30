@@ -15,7 +15,8 @@
 		"https-localhost": "4.7.1",
 		"ws": "8.18.0",
 		"@types/ws": "8.5.13",
-		"tinyglobby": "0.2.14"
+		"tinyglobby": "0.2.14",
+		"yaml": "2.8.1"
 	},
 	"devDependencies": {
 		"typescript": "5.8.3",
