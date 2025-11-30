@@ -27,7 +27,7 @@ const exec = util.promisify(childProcess.exec);
 	console.error(stderr);
 
 	process.chdir("out");
-	({ stdout, stderr } = await exec('npm install --no-audit --no-fund'));
+	({ stdout, stderr } = await exec('pnpm install'));
 	console.log(stdout);
 	console.error(stderr);
 })();
