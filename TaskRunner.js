@@ -276,13 +276,14 @@ async function install(...projects) {
             const filesToPreservePreLink = ['./package.json', './pnpm-lock.yaml', './pnpm-workspace.yaml'];
             const preservedFilesContent = {};
             for (const file of filesToPreservePreLink)
-                preservedFilesContent[file] = await promises_1.default.readFile(file, 'utf8');
+                preservedFilesContent[file] = await promises_1.default.readFile(file, 'utf8').catch(() => undefined);
             console.log('');
             Log_1.default.info(`Linking local ${localLinkNames.map(name => ansicolor_1.default.lightCyan(name)).join(', ')}...`);
             const localLinkPaths = Object.values(projectLinks).map(pathname => path_1.default.resolve(root, '..', pathname));
             await this.exec('NPM:PATH:pnpm', 'link', ...localLinkPaths);
             for (const preservedFile of filesToPreservePreLink)
-                await promises_1.default.writeFile(preservedFile, preservedFilesContent[preservedFile]);
+                if (preservedFilesContent[preservedFile] !== undefined)
+                    await promises_1.default.writeFile(preservedFile, preservedFilesContent[preservedFile]);
         }
         console.log('');
     }
