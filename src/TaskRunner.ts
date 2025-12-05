@@ -332,9 +332,9 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 		const localLinkNames = Object.keys(projectLinks)
 		if (localLinkNames.length) {
 			const filesToPreservePreLink = ['./package.json', './pnpm-lock.yaml', './pnpm-workspace.yaml']
-			const preservedFilesContent: Record<string, string> = {}
+			const preservedFilesContent: Record<string, string | undefined> = {}
 			for (const file of filesToPreservePreLink)
-				preservedFilesContent[file] = await fs.readFile(file, 'utf8')
+				preservedFilesContent[file] = await fs.readFile(file, 'utf8').catch(() => undefined)
 
 			console.log('')
 			Log.info(`Linking local ${localLinkNames.map(name => ansi.lightCyan(name)).join(', ')}...`)
@@ -344,7 +344,8 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 			)
 
 			for (const preservedFile of filesToPreservePreLink)
-				await fs.writeFile(preservedFile, preservedFilesContent[preservedFile])
+				if (preservedFilesContent[preservedFile] !== undefined)
+					await fs.writeFile(preservedFile, preservedFilesContent[preservedFile])
 		}
 
 		console.log('')
