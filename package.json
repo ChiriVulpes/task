@@ -21,6 +21,11 @@
 		"typescript": "5.8.3",
 		"ts-node": "10.9.2"
 	},
+	"pnpm": {
+		"overrides": {
+			"express": "-"
+		}
+	},
 	"scripts": {
 		"build": "node ./build.js",
 		"watch": "tsc --project src/tsconfig.json --watch"
