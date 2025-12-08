@@ -276,7 +276,8 @@ async function install(...projects) {
                     .map(async ([name, packageName, tag]) => [
                     name,
                     packageName,
-                    await this.readExec('NPM:PATH:pnpm', 'view', `${packageName}@${tag ?? 'latest'}`, 'version'),
+                    await this.readExec('NPM:PATH:pnpm', 'view', `${packageName}@${tag ?? 'latest'}`, 'version')
+                        .then(version => version.trim()),
                 ]));
                 npmToInstallText = npmToInstall.map(([name, packageName, tag]) => ansicolor_1.default.lightCyan(`${packageName}${tag ? `@${tag}` : ''}`)).join(', ');
             }
