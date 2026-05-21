@@ -55,7 +55,7 @@ try {
 }
 catch { }
 try {
-    const tsnode = require("ts-node");
+    const tsnode = require("tsx/cjs/api");
     tsnode.register();
 }
 catch { }
@@ -307,7 +307,7 @@ async function install(...projects) {
         process.chdir(project.path);
         console.log('');
         Log_1.default.info(`Auditing ${ansicolor_1.default.lightGreen(project.path)}`);
-        await this.exec('NPM:PATH:pnpm', 'audit');
+        await this.exec('NPM:PATH:pnpm', 'audit', '--prod');
     }
     console.log('');
     process.chdir(root);

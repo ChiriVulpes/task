@@ -12,9 +12,9 @@
     "tsconfig-paths": "4.2.0",
     "chokidar": "4.0.3",
     "https-localhost": "4.7.1",
-    "ws": "8.18.0",
+    "ws": "8.20.1",
     "@types/ws": "8.5.13",
-    "tinyglobby": "0.2.14"
+    "tinyglobby": "0.2.16"
   },
   "pnpm": {
     "overrides": {
