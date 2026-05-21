@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 
-import ansi from 'ansicolor'
-import { spawn } from "child_process"
-import chokidar from 'chokidar'
-import dotenv from 'dotenv'
-import fs from 'fs/promises'
-import path from 'path'
-import { glob } from 'tinyglobby'
-import * as tsconfigpaths from 'tsconfig-paths'
-import Hash from './Hash'
-import Log from './Log'
-import type { TaskFunction, TaskFunctionDef } from './Task'
-import Task from './Task'
-import { stopwatch } from './Time'
+import ansi from 'ansicolor';
+import { spawn } from "child_process";
+import chokidar from 'chokidar';
+import dotenv from 'dotenv';
+import fs from 'fs/promises';
+import path from 'path';
+import { glob } from 'tinyglobby';
+import * as tsconfigpaths from 'tsconfig-paths';
+import Hash from './Hash';
+import Log from './Log';
+import type { TaskFunction, TaskFunctionDef } from './Task';
+import Task from './Task';
+import { stopwatch } from './Time';
 
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 
@@ -22,7 +22,7 @@ try {
 catch { }
 
 try {
-	const tsnode: typeof import("ts-node") = require("ts-node")
+	const tsnode: typeof import("tsx/cjs/api") = require("tsx/cjs/api")
 	tsnode.register()
 } catch { }
 tsconfigpaths.register()
@@ -372,7 +372,7 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 		process.chdir(project.path)
 		console.log('')
 		Log.info(`Auditing ${ansi.lightGreen(project.path)}`)
-		await this.exec('NPM:PATH:pnpm', 'audit')
+		await this.exec('NPM:PATH:pnpm', 'audit', '--prod')
 	}
 
 	console.log('')
