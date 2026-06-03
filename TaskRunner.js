@@ -60,6 +60,17 @@ try {
 }
 catch { }
 tsconfigpaths.register();
+function childEnv(optionsEnv) {
+    const env = {
+        ...process.env,
+        ...optionsEnv,
+    };
+    // pnpm exposes its own config to lifecycle scripts via npm_config_*.
+    // npm then misinterprets this as npm's global config and can double-load it.
+    delete env.npm_config_globalconfig;
+    delete env.NPM_CONFIG_GLOBALCONFIG;
+    return env;
+}
 const debouncedTasks = new Map();
 const loggedErrors = new Set();
 const taskApi = {
@@ -181,7 +192,7 @@ const taskApi = {
             command = command.startsWith('PATH:')
                 ? command.slice(5)
                 : path_1.default.resolve(`node_modules/.bin/${command}`);
-            const childProcess = (0, child_process_1.spawn)(wrapQuotes(command), args.map(wrapQuotes), { shell: true, stdio: [process.stdin, options.stdout ? 'pipe' : process.stdout, options.stderr ? 'pipe' : process.stderr], cwd: options.cwd, env: options.env });
+            const childProcess = (0, child_process_1.spawn)(wrapQuotes(command), args.map(wrapQuotes), { shell: true, stdio: [process.stdin, options.stdout ? 'pipe' : process.stdout, options.stderr ? 'pipe' : process.stderr], cwd: options.cwd, env: childEnv(options.env) });
             if (options.stdout)
                 childProcess.stdout?.on('data', options.stdout);
             if (options.stderr)
