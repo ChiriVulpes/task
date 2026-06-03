@@ -27,6 +27,20 @@ try {
 } catch { }
 tsconfigpaths.register()
 
+function childEnv(optionsEnv?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+	const env = {
+		...process.env,
+		...optionsEnv,
+	}
+
+	// pnpm exposes its own config to lifecycle scripts via npm_config_*.
+	// npm then misinterprets this as npm's global config and can double-load it.
+	delete env.npm_config_globalconfig
+	delete env.NPM_CONFIG_GLOBALCONFIG
+
+	return env
+}
+
 export interface ITaskCLIOptions {
 	cwd?: string
 	env?: NodeJS.ProcessEnv
@@ -196,7 +210,7 @@ const taskApi: ITaskApi = {
 				: path.resolve(`node_modules/.bin/${command}`)
 
 			const childProcess = spawn(wrapQuotes(command), args.map(wrapQuotes),
-				{ shell: true, stdio: [process.stdin, options.stdout ? 'pipe' : process.stdout, options.stderr ? 'pipe' : process.stderr], cwd: options.cwd, env: options.env })
+				{ shell: true, stdio: [process.stdin, options.stdout ? 'pipe' : process.stdout, options.stderr ? 'pipe' : process.stderr], cwd: options.cwd, env: childEnv(options.env) })
 
 			if (options.stdout)
 				childProcess.stdout?.on('data', options.stdout)
