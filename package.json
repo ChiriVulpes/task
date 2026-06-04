@@ -15,11 +15,11 @@
 		"https-localhost": "4.7.1",
 		"ws": "8.20.1",
 		"@types/ws": "8.5.13",
-		"tinyglobby": "0.2.16"
+		"tinyglobby": "0.2.16",
+		"tsx": "4.21.0"
 	},
 	"devDependencies": {
-		"typescript": "5.8.3",
-		"tsx": "4.21.0"
+		"typescript": "5.8.3"
 	},
 	"pnpm": {
 		"overrides": {
