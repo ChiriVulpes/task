@@ -298,19 +298,29 @@ function packageBinEntries (packageName: string, packageJson: PackageJson): [nam
 	return Object.entries(bin)
 }
 
-async function normalizeBinShim (shimPath: string, binDir: string, binTarget: string) {
-	let content = await fs.readFile(shimPath, 'utf8')
-	const originalContent = content
-	const relativeTarget = path.relative(binDir, binTarget)
+function binShimReplacements (binDir: string, fromTarget: string, toTarget: string): [from: string, to: string][] {
+	const relativeTarget = path.relative(binDir, fromTarget)
 	const relativeTargetPosix = toPosixPath(relativeTarget)
-	const absoluteTarget = path.resolve(binTarget)
+	const absoluteTarget = path.resolve(toTarget)
 	const absoluteTargetPosix = toPosixPath(absoluteTarget)
 
-	const replacements: [from: string, to: string][] = [
+	return [
 		[`%~dp0\\${relativeTarget}`, absoluteTarget],
 		[`%~dp0/${relativeTargetPosix}`, absoluteTargetPosix],
 		[`$basedir\\${relativeTarget}`, absoluteTarget],
 		[`$basedir/${relativeTargetPosix}`, absoluteTargetPosix],
+	]
+}
+
+async function normalizeBinShim (shimPath: string, binDir: string, binTarget: string, installedBinTarget: string) {
+	let content = await fs.readFile(shimPath, 'utf8')
+	const originalContent = content
+	const absoluteTarget = path.resolve(binTarget)
+	const absoluteTargetPosix = toPosixPath(absoluteTarget)
+
+	const replacements: [from: string, to: string][] = [
+		...binShimReplacements(binDir, binTarget, binTarget),
+		...binShimReplacements(binDir, installedBinTarget, binTarget),
 	]
 
 	for (const [from, to] of replacements)
@@ -353,7 +363,7 @@ async function normalizeLocalPackageBins (packageName: string, target: string, p
 			throw new Error(`No bin shim found for local package bin: ${packageName} -> ${binName}`)
 
 		for (const shimPath of existingShimPaths)
-			await normalizeBinShim(shimPath, binDir, binTarget)
+			await normalizeBinShim(shimPath, binDir, binTarget, path.resolve(projectRoot, 'node_modules', ...packageName.split('/'), binPath))
 	}
 }
 
