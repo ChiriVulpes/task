@@ -208,6 +208,130 @@ const taskApi = {
     },
     install,
 };
+function parseLocalLinkName(name) {
+    const parts = name
+        .replaceAll('\\', '/')
+        .split('/')
+        .map(part => part.trim())
+        .filter(part => part && part !== '.');
+    if (!parts.length)
+        throw new Error(`Invalid link package name: "${name}"`);
+    if (parts.length >= 2 && parts[parts.length - 2].startsWith('@')) {
+        const packageName = `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
+        return [parts.slice(0, -2).join('/') || '.', packageName];
+    }
+    return [parts.slice(0, -1).join('/') || '.', parts[parts.length - 1]];
+}
+function localPackagePath(projectRoot, packageName) {
+    return path_1.default.resolve(projectRoot, 'node_modules', ...packageName.split('/'));
+}
+function normalisePathForComparison(pathname) {
+    pathname = path_1.default.resolve(pathname);
+    if (process.platform === 'win32')
+        pathname = pathname.replace(/^\\\\\?\\/, '').toLowerCase();
+    return pathname;
+}
+function toPosixPath(pathname) {
+    return pathname.replaceAll('\\', '/');
+}
+function packageBinEntries(packageName, packageJson) {
+    const { bin } = packageJson;
+    if (!bin)
+        return [];
+    if (typeof bin === 'string') {
+        const binName = packageName.startsWith('@') ? packageName.split('/')[1] : packageName;
+        return [[binName, bin]];
+    }
+    return Object.entries(bin);
+}
+async function normalizeBinShim(shimPath, binDir, binTarget) {
+    let content = await promises_1.default.readFile(shimPath, 'utf8');
+    const originalContent = content;
+    const relativeTarget = path_1.default.relative(binDir, binTarget);
+    const relativeTargetPosix = toPosixPath(relativeTarget);
+    const absoluteTarget = path_1.default.resolve(binTarget);
+    const absoluteTargetPosix = toPosixPath(absoluteTarget);
+    const replacements = [
+        [`%~dp0\\${relativeTarget}`, absoluteTarget],
+        [`%~dp0/${relativeTargetPosix}`, absoluteTargetPosix],
+        [`$basedir\\${relativeTarget}`, absoluteTarget],
+        [`$basedir/${relativeTargetPosix}`, absoluteTargetPosix],
+    ];
+    for (const [from, to] of replacements)
+        content = content.replaceAll(from, to);
+    if (content === originalContent
+        && !content.includes(`"${absoluteTarget}"`)
+        && !content.includes(`"${absoluteTargetPosix}"`)
+        && !content.includes(`'${absoluteTargetPosix}'`))
+        throw new Error(`Bin shim does not point to expected local package target: ${shimPath}`);
+    if (content !== originalContent)
+        await promises_1.default.writeFile(shimPath, content);
+}
+async function normalizeLocalPackageBins(packageName, target, projectRoot) {
+    const packageJsonPath = path_1.default.resolve(target, 'package.json');
+    const packageJson = JSON.parse(await promises_1.default.readFile(packageJsonPath, 'utf8'));
+    const bins = packageBinEntries(packageName, packageJson);
+    if (!bins.length)
+        return;
+    const binDir = path_1.default.resolve(projectRoot, 'node_modules/.bin');
+    for (const [binName, binPath] of bins) {
+        const binTarget = path_1.default.resolve(target, binPath);
+        const stat = await promises_1.default.stat(binTarget).catch(() => undefined);
+        if (!stat?.isFile())
+            throw new Error(`Local package bin target does not exist: ${binTarget}`);
+        const shimPaths = [
+            path_1.default.resolve(binDir, binName),
+            path_1.default.resolve(binDir, `${binName}.CMD`),
+            path_1.default.resolve(binDir, `${binName}.ps1`),
+        ];
+        const existingShimPaths = (await Promise.all(shimPaths.map(async (shimPath) => await promises_1.default.stat(shimPath).then(() => shimPath).catch(() => undefined)))).filter(shimPath => shimPath !== undefined);
+        if (!existingShimPaths.length)
+            throw new Error(`No bin shim found for local package bin: ${packageName} -> ${binName}`);
+        for (const shimPath of existingShimPaths)
+            await normalizeBinShim(shimPath, binDir, binTarget);
+    }
+}
+async function normalizeLocalPackageLinks(projectLinks, workspaceRoot, projectRoot) {
+    for (const [packageName, linkPath] of Object.entries(projectLinks)) {
+        const target = path_1.default.resolve(workspaceRoot, '..', linkPath);
+        const targetStat = await promises_1.default.stat(target).catch(() => undefined);
+        if (!targetStat?.isDirectory())
+            throw new Error(`Local package link target does not exist or is not a directory: ${target}`);
+        const installedPath = localPackagePath(projectRoot, packageName);
+        const installedStat = await promises_1.default.lstat(installedPath).catch(() => undefined);
+        if (!installedStat)
+            throw new Error(`Local package link was not installed: ${installedPath}`);
+        if (!installedStat.isSymbolicLink())
+            throw new Error(`Refusing to replace non-link local package entry: ${installedPath}`);
+        const [installedRealPath, targetRealPath] = await Promise.all([
+            promises_1.default.realpath(installedPath),
+            promises_1.default.realpath(target),
+        ]);
+        if (normalisePathForComparison(installedRealPath) !== normalisePathForComparison(targetRealPath))
+            throw new Error(`Local package link points to the wrong target: ${installedPath} -> ${installedRealPath}, expected ${target}`);
+        const currentLinkTarget = await promises_1.default.readlink(installedPath);
+        if (!path_1.default.isAbsolute(currentLinkTarget)) {
+            await promises_1.default.rm(installedPath);
+            await promises_1.default.symlink(target, installedPath, process.platform === 'win32' ? 'junction' : 'dir');
+        }
+        await normalizeLocalPackageBins(packageName, target, projectRoot);
+    }
+}
+async function restorePnpmWorkspaceState(statePath, content) {
+    if (content === undefined)
+        return;
+    let state;
+    try {
+        state = JSON.parse(content);
+    }
+    catch {
+        await promises_1.default.writeFile(statePath, content);
+        return;
+    }
+    if (state && typeof state === 'object' && 'lastValidatedTimestamp' in state)
+        state.lastValidatedTimestamp = Date.now() + 1000;
+    await promises_1.default.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
+}
 async function install(...projects) {
     const root = process.cwd();
     const parsedLinks = !process.env.TASK_INSTALL_LINK ? []
@@ -219,9 +343,8 @@ async function install(...projects) {
                 throw new Error(`Invalid link format: "${link}"`);
             let name = link.slice(0, ei).trim();
             const linkPath = link.slice(ei + 1).trim();
-            let projectName = !name.includes('/') ? '.' : path_1.default.dirname(name);
-            projectName = projectName.startsWith('./') ? projectName.slice(2) : projectName;
-            name = !name.includes('/') ? name : path_1.default.basename(name);
+            const [projectName, packageName] = parseLocalLinkName(name);
+            name = packageName;
             return [projectName, { name, linkPath }];
         });
     const linksByProject = Object.entries(Object.groupBy(parsedLinks, ([projectName]) => projectName))
@@ -287,7 +410,7 @@ async function install(...projects) {
                     .map(async ([name, packageName, tag]) => [
                     name,
                     packageName,
-                    await this.readExec('NPM:PATH:pnpm', 'view', `${packageName}@${tag ?? 'latest'}`, 'version')
+                    await this.readExec('NPM:PATH:pnpm', 'view', `${packageName}@${tag ?? 'latest'}`, 'version', '--silent')
                         .then(version => version.trim()),
                 ]));
                 npmToInstallText = npmToInstall.map(([name, packageName, tag]) => ansicolor_1.default.lightCyan(`${packageName}${tag ? `@${tag}` : ''}`)).join(', ');
@@ -300,16 +423,24 @@ async function install(...projects) {
         const localLinkNames = Object.keys(projectLinks);
         if (localLinkNames.length) {
             const filesToPreservePreLink = ['./package.json', './pnpm-lock.yaml', './pnpm-workspace.yaml'];
+            const workspaceStateFile = './node_modules/.pnpm-workspace-state-v1.json';
             const preservedFilesContent = {};
             for (const file of filesToPreservePreLink)
                 preservedFilesContent[file] = await promises_1.default.readFile(file, 'utf8').catch(() => undefined);
+            const preservedWorkspaceStateContent = await promises_1.default.readFile(workspaceStateFile, 'utf8').catch(() => undefined);
             console.log('');
             Log_1.default.info(`Linking local ${localLinkNames.map(name => ansicolor_1.default.lightCyan(name)).join(', ')}...`);
             const localLinkPaths = Object.values(projectLinks).map(pathname => path_1.default.resolve(root, '..', pathname));
-            await this.exec('NPM:PATH:pnpm', 'link', ...localLinkPaths);
-            for (const preservedFile of filesToPreservePreLink)
-                if (preservedFilesContent[preservedFile] !== undefined)
-                    await promises_1.default.writeFile(preservedFile, preservedFilesContent[preservedFile]);
+            try {
+                await this.exec('NPM:PATH:pnpm', 'link', ...localLinkPaths);
+                await normalizeLocalPackageLinks(projectLinks, root, process.cwd());
+            }
+            finally {
+                for (const preservedFile of filesToPreservePreLink)
+                    if (preservedFilesContent[preservedFile] !== undefined)
+                        await promises_1.default.writeFile(preservedFile, preservedFilesContent[preservedFile]);
+                await restorePnpmWorkspaceState(workspaceStateFile, preservedWorkspaceStateContent);
+            }
         }
         console.log('');
     }
