@@ -341,7 +341,7 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 					.map(async ([name, packageName, tag]) => [
 						name,
 						packageName,
-						await this.readExec('NPM:PATH:pnpm', 'view', `${packageName}@${tag ?? 'latest'}`, 'version')
+						await this.readExec('NPM:PATH:pnpm', 'view', `${packageName}@${tag ?? 'latest'}`, 'version', '--silent')
 							.then(version => version.trim()),
 					])
 				)
