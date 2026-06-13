@@ -247,6 +247,166 @@ interface GitHubDependency {
 	branch?: string
 }
 
+interface PackageJson {
+	name?: string
+	bin?: string | Record<string, string>
+}
+
+function parseLocalLinkName (name: string): [projectName: string, packageName: string] {
+	const parts = name
+		.replaceAll('\\', '/')
+		.split('/')
+		.map(part => part.trim())
+		.filter(part => part && part !== '.')
+
+	if (!parts.length)
+		throw new Error(`Invalid link package name: "${name}"`)
+
+	if (parts.length >= 2 && parts[parts.length - 2].startsWith('@')) {
+		const packageName = `${parts[parts.length - 2]}/${parts[parts.length - 1]}`
+		return [parts.slice(0, -2).join('/') || '.', packageName]
+	}
+
+	return [parts.slice(0, -1).join('/') || '.', parts[parts.length - 1]]
+}
+
+function localPackagePath (projectRoot: string, packageName: string): string {
+	return path.resolve(projectRoot, 'node_modules', ...packageName.split('/'))
+}
+
+function normalisePathForComparison (pathname: string): string {
+	pathname = path.resolve(pathname)
+	if (process.platform === 'win32')
+		pathname = pathname.replace(/^\\\\\?\\/, '').toLowerCase()
+	return pathname
+}
+
+function toPosixPath (pathname: string): string {
+	return pathname.replaceAll('\\', '/')
+}
+
+function packageBinEntries (packageName: string, packageJson: PackageJson): [name: string, path: string][] {
+	const { bin } = packageJson
+	if (!bin)
+		return []
+
+	if (typeof bin === 'string') {
+		const binName = packageName.startsWith('@') ? packageName.split('/')[1] : packageName
+		return [[binName, bin]]
+	}
+
+	return Object.entries(bin)
+}
+
+async function normalizeBinShim (shimPath: string, binDir: string, binTarget: string) {
+	let content = await fs.readFile(shimPath, 'utf8')
+	const originalContent = content
+	const relativeTarget = path.relative(binDir, binTarget)
+	const relativeTargetPosix = toPosixPath(relativeTarget)
+	const absoluteTarget = path.resolve(binTarget)
+	const absoluteTargetPosix = toPosixPath(absoluteTarget)
+
+	const replacements: [from: string, to: string][] = [
+		[`%~dp0\\${relativeTarget}`, absoluteTarget],
+		[`%~dp0/${relativeTargetPosix}`, absoluteTargetPosix],
+		[`$basedir\\${relativeTarget}`, absoluteTarget],
+		[`$basedir/${relativeTargetPosix}`, absoluteTargetPosix],
+	]
+
+	for (const [from, to] of replacements)
+		content = content.replaceAll(from, to)
+
+	if (content === originalContent
+		&& !content.includes(`"${absoluteTarget}"`)
+		&& !content.includes(`"${absoluteTargetPosix}"`)
+		&& !content.includes(`'${absoluteTargetPosix}'`))
+		throw new Error(`Bin shim does not point to expected local package target: ${shimPath}`)
+
+	if (content !== originalContent)
+		await fs.writeFile(shimPath, content)
+}
+
+async function normalizeLocalPackageBins (packageName: string, target: string, projectRoot: string) {
+	const packageJsonPath = path.resolve(target, 'package.json')
+	const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8')) as PackageJson
+	const bins = packageBinEntries(packageName, packageJson)
+	if (!bins.length)
+		return
+
+	const binDir = path.resolve(projectRoot, 'node_modules/.bin')
+	for (const [binName, binPath] of bins) {
+		const binTarget = path.resolve(target, binPath)
+		const stat = await fs.stat(binTarget).catch(() => undefined)
+		if (!stat?.isFile())
+			throw new Error(`Local package bin target does not exist: ${binTarget}`)
+
+		const shimPaths = [
+			path.resolve(binDir, binName),
+			path.resolve(binDir, `${binName}.CMD`),
+			path.resolve(binDir, `${binName}.ps1`),
+		]
+		const existingShimPaths = (await Promise.all(shimPaths.map(async shimPath =>
+			await fs.stat(shimPath).then(() => shimPath).catch(() => undefined)
+		))).filter(shimPath => shimPath !== undefined)
+
+		if (!existingShimPaths.length)
+			throw new Error(`No bin shim found for local package bin: ${packageName} -> ${binName}`)
+
+		for (const shimPath of existingShimPaths)
+			await normalizeBinShim(shimPath, binDir, binTarget)
+	}
+}
+
+async function normalizeLocalPackageLinks (projectLinks: Record<string, string>, workspaceRoot: string, projectRoot: string) {
+	for (const [packageName, linkPath] of Object.entries(projectLinks)) {
+		const target = path.resolve(workspaceRoot, '..', linkPath)
+		const targetStat = await fs.stat(target).catch(() => undefined)
+		if (!targetStat?.isDirectory())
+			throw new Error(`Local package link target does not exist or is not a directory: ${target}`)
+
+		const installedPath = localPackagePath(projectRoot, packageName)
+		const installedStat = await fs.lstat(installedPath).catch(() => undefined)
+		if (!installedStat)
+			throw new Error(`Local package link was not installed: ${installedPath}`)
+		if (!installedStat.isSymbolicLink())
+			throw new Error(`Refusing to replace non-link local package entry: ${installedPath}`)
+
+		const [installedRealPath, targetRealPath] = await Promise.all([
+			fs.realpath(installedPath),
+			fs.realpath(target),
+		])
+		if (normalisePathForComparison(installedRealPath) !== normalisePathForComparison(targetRealPath))
+			throw new Error(`Local package link points to the wrong target: ${installedPath} -> ${installedRealPath}, expected ${target}`)
+
+		const currentLinkTarget = await fs.readlink(installedPath)
+		if (!path.isAbsolute(currentLinkTarget)) {
+			await fs.rm(installedPath)
+			await fs.symlink(target, installedPath, process.platform === 'win32' ? 'junction' : 'dir')
+		}
+
+		await normalizeLocalPackageBins(packageName, target, projectRoot)
+	}
+}
+
+async function restorePnpmWorkspaceState (statePath: string, content: string | undefined) {
+	if (content === undefined)
+		return
+
+	let state: unknown
+	try {
+		state = JSON.parse(content)
+	}
+	catch {
+		await fs.writeFile(statePath, content)
+		return
+	}
+
+	if (state && typeof state === 'object' && 'lastValidatedTimestamp' in state)
+		(state as { lastValidatedTimestamp: number }).lastValidatedTimestamp = Date.now() + 1000
+
+	await fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`)
+}
+
 async function install (this: ITaskApi, ...projects: Project[]) {
 	const root = process.cwd()
 
@@ -260,9 +420,8 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 
 				let name = link.slice(0, ei).trim()
 				const linkPath = link.slice(ei + 1).trim()
-				let projectName = !name.includes('/') ? '.' : path.dirname(name)
-				projectName = projectName.startsWith('./') ? projectName.slice(2) : projectName
-				name = !name.includes('/') ? name : path.basename(name)
+				const [projectName, packageName] = parseLocalLinkName(name)
+				name = packageName
 				return [projectName, { name, linkPath }] as const
 			})
 
@@ -362,20 +521,27 @@ async function install (this: ITaskApi, ...projects: Project[]) {
 		const localLinkNames = Object.keys(projectLinks)
 		if (localLinkNames.length) {
 			const filesToPreservePreLink = ['./package.json', './pnpm-lock.yaml', './pnpm-workspace.yaml']
+			const workspaceStateFile = './node_modules/.pnpm-workspace-state-v1.json'
 			const preservedFilesContent: Record<string, string | undefined> = {}
 			for (const file of filesToPreservePreLink)
 				preservedFilesContent[file] = await fs.readFile(file, 'utf8').catch(() => undefined)
+			const preservedWorkspaceStateContent = await fs.readFile(workspaceStateFile, 'utf8').catch(() => undefined)
 
 			console.log('')
 			Log.info(`Linking local ${localLinkNames.map(name => ansi.lightCyan(name)).join(', ')}...`)
 			const localLinkPaths = Object.values(projectLinks).map(pathname => path.resolve(root, '..', pathname))
-			await this.exec('NPM:PATH:pnpm', 'link',
-				...localLinkPaths,
-			)
-
-			for (const preservedFile of filesToPreservePreLink)
-				if (preservedFilesContent[preservedFile] !== undefined)
-					await fs.writeFile(preservedFile, preservedFilesContent[preservedFile])
+			try {
+				await this.exec('NPM:PATH:pnpm', 'link',
+					...localLinkPaths,
+				)
+				await normalizeLocalPackageLinks(projectLinks, root, process.cwd())
+			}
+			finally {
+				for (const preservedFile of filesToPreservePreLink)
+					if (preservedFilesContent[preservedFile] !== undefined)
+						await fs.writeFile(preservedFile, preservedFilesContent[preservedFile])
+				await restorePnpmWorkspaceState(workspaceStateFile, preservedWorkspaceStateContent)
+			}
 		}
 
 		console.log('')
