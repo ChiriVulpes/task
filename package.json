@@ -7,24 +7,19 @@
 		"task": "TaskRunner.js"
 	},
 	"dependencies": {
-		"ansicolor": "2.0.3",
 		"@types/node": "22.16.0",
-		"dotenv": "16.5.0",
-		"tsconfig-paths": "4.2.0",
-		"chokidar": "4.0.3",
-		"https-localhost": "4.7.1",
-		"ws": "8.20.1",
 		"@types/ws": "8.5.13",
+		"ansicolor": "2.0.3",
+		"chokidar": "4.0.3",
+		"dotenv": "16.5.0",
+		"https-localhost": "4.7.1",
 		"tinyglobby": "0.2.16",
-		"tsx": "4.21.0"
+		"tsconfig-paths": "4.2.0",
+		"tsx": "4.21.0",
+		"ws": "8.20.1"
 	},
 	"devDependencies": {
 		"typescript": "5.8.3"
-	},
-	"pnpm": {
-		"overrides": {
-			"express": "-"
-		}
 	},
 	"scripts": {
 		"build": "node ./build.js",
