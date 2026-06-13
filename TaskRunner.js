@@ -244,18 +244,26 @@ function packageBinEntries(packageName, packageJson) {
     }
     return Object.entries(bin);
 }
-async function normalizeBinShim(shimPath, binDir, binTarget) {
-    let content = await promises_1.default.readFile(shimPath, 'utf8');
-    const originalContent = content;
-    const relativeTarget = path_1.default.relative(binDir, binTarget);
+function binShimReplacements(binDir, fromTarget, toTarget) {
+    const relativeTarget = path_1.default.relative(binDir, fromTarget);
     const relativeTargetPosix = toPosixPath(relativeTarget);
-    const absoluteTarget = path_1.default.resolve(binTarget);
+    const absoluteTarget = path_1.default.resolve(toTarget);
     const absoluteTargetPosix = toPosixPath(absoluteTarget);
-    const replacements = [
+    return [
         [`%~dp0\\${relativeTarget}`, absoluteTarget],
         [`%~dp0/${relativeTargetPosix}`, absoluteTargetPosix],
         [`$basedir\\${relativeTarget}`, absoluteTarget],
         [`$basedir/${relativeTargetPosix}`, absoluteTargetPosix],
+    ];
+}
+async function normalizeBinShim(shimPath, binDir, binTarget, installedBinTarget) {
+    let content = await promises_1.default.readFile(shimPath, 'utf8');
+    const originalContent = content;
+    const absoluteTarget = path_1.default.resolve(binTarget);
+    const absoluteTargetPosix = toPosixPath(absoluteTarget);
+    const replacements = [
+        ...binShimReplacements(binDir, binTarget, binTarget),
+        ...binShimReplacements(binDir, installedBinTarget, binTarget),
     ];
     for (const [from, to] of replacements)
         content = content.replaceAll(from, to);
@@ -288,7 +296,7 @@ async function normalizeLocalPackageBins(packageName, target, projectRoot) {
         if (!existingShimPaths.length)
             throw new Error(`No bin shim found for local package bin: ${packageName} -> ${binName}`);
         for (const shimPath of existingShimPaths)
-            await normalizeBinShim(shimPath, binDir, binTarget);
+            await normalizeBinShim(shimPath, binDir, binTarget, path_1.default.resolve(projectRoot, 'node_modules', ...packageName.split('/'), binPath));
     }
 }
 async function normalizeLocalPackageLinks(projectLinks, workspaceRoot, projectRoot) {
