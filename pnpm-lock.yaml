@@ -40,45 +40,12 @@ importers:
         specifier: 4.21.0
         version: 4.21.0
       ws:
-        specifier: 8.20.1
-        version: 8.20.1
+        specifier: 8.21.0
+        version: 8.21.0
     devDependencies:
       typescript:
         specifier: 5.8.3
         version: 5.8.3
-
-  out:
-    dependencies:
-      '@types/node':
-        specifier: 22.16.0
-        version: 22.16.0
-      '@types/ws':
-        specifier: 8.5.13
-        version: 8.5.13
-      ansicolor:
-        specifier: 2.0.3
-        version: 2.0.3
-      chokidar:
-        specifier: 4.0.3
-        version: 4.0.3
-      dotenv:
-        specifier: 16.5.0
-        version: 16.5.0
-      https-localhost:
-        specifier: 4.7.1
-        version: 4.7.1
-      tinyglobby:
-        specifier: 0.2.16
-        version: 0.2.16
-      tsconfig-paths:
-        specifier: 4.2.0
-        version: 4.2.0
-      tsx:
-        specifier: 4.21.0
-        version: 4.21.0
-      ws:
-        specifier: 8.20.1
-        version: 8.20.1
 
 packages:
 
@@ -457,8 +424,8 @@ packages:
   wbuf@1.7.3:
     resolution: {integrity: sha512-O84QOnr0icsbFGLS0O3bI5FswxzRr8/gHwWkDlQFskhSPryQXvrTMxjxGP4+iWYoauLoBvfDpkrOauZ+0iZpDA==}
 
-  ws@8.20.1:
-    resolution: {integrity: sha512-It4dO0K5v//JtTXuPkfEOaI3uUN87iYPnqo/ZzqCoG3g8uhA66QUMs/SrM0YK7/NAu+r4LMh/9dq2A7k+rHs+w==}
+  ws@8.21.0:
+    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -780,4 +747,4 @@ snapshots:
     dependencies:
       minimalistic-assert: 1.0.1
 
-  ws@8.20.1: {}
+  ws@8.21.0: {}
